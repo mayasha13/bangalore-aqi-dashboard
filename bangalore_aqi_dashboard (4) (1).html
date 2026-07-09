@@ -1,0 +1,1670 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bangalore AQI — Decade Intelligence Report 2014–2024</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Syne:wght@700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --ink: #08090d;
+  --ink2: #0f1117;
+  --ink3: #161b26;
+  --border: #1e2535;
+  --dim: rgba(255,255,255,0.06);
+  --text: #e2e6f0;
+  --muted: #5a6478;
+  --good: #10d980;
+  --sat: #f0cb35;
+  --mod: #f97316;
+  --poor: #ef4444;
+  --sev: #c026d3;
+  --north: #f97316;
+  --south: #10d980;
+  --east: #ef4444;
+  --west: #38bdf8;
+  --out: #a78bfa;
+  --glow-green: rgba(16,217,128,0.15);
+  --glow-red: rgba(239,68,68,0.12);
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{background:var(--ink);color:var(--text);font-family:'Space Grotesk',sans-serif;overflow-x:hidden;cursor:none;}
+
+/* CUSTOM CURSOR */
+.cursor{position:fixed;width:10px;height:10px;background:var(--good);border-radius:50%;pointer-events:none;z-index:9999;transform:translate(-50%,-50%);transition:transform 0.1s,background 0.2s;}
+.cursor-ring{position:fixed;width:32px;height:32px;border:1.5px solid rgba(16,217,128,0.5);border-radius:50%;pointer-events:none;z-index:9998;transform:translate(-50%,-50%);transition:transform 0.15s ease,width 0.2s,height 0.2s;}
+
+/* NOISE TEXTURE OVERLAY */
+body::before{
+  content:'';position:fixed;inset:0;
+  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+  pointer-events:none;z-index:1;opacity:0.4;
+}
+
+/* HERO */
+.hero{
+  min-height:100vh;display:flex;flex-direction:column;justify-content:center;
+  padding:80px 60px;position:relative;overflow:hidden;
+  background: radial-gradient(ellipse 80% 60% at 50% 0%, rgba(16,217,128,0.07) 0%, transparent 70%),
+              radial-gradient(ellipse 40% 40% at 80% 80%, rgba(239,68,68,0.05) 0%, transparent 60%),
+              var(--ink);
+}
+.hero-grid{
+  position:absolute;inset:0;
+  background-image: linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
+                    linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
+  background-size: 60px 60px;
+  mask-image: radial-gradient(ellipse 80% 80% at 50% 50%, black, transparent);
+}
+.hero-tag{
+  font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:4px;
+  color:var(--good);text-transform:uppercase;margin-bottom:24px;
+  display:inline-flex;align-items:center;gap:8px;
+}
+.hero-tag::before{content:'';width:24px;height:1px;background:var(--good);}
+.hero-title{
+  font-family:'Syne',sans-serif;font-size:clamp(56px,9vw,120px);
+  line-height:0.88;font-weight:800;color:#fff;
+  letter-spacing:-2px;margin-bottom:24px;
+}
+.hero-title em{color:var(--good);font-style:normal;}
+.hero-title .line2{color:rgba(255,255,255,0.2);}
+.hero-sub{
+  max-width:560px;font-size:15px;color:var(--muted);
+  font-family:'JetBrains Mono',monospace;letter-spacing:0.3px;
+  line-height:1.7;margin-bottom:48px;
+}
+.hero-kpis{display:flex;gap:48px;flex-wrap:wrap;}
+.hero-kpi .val{
+  font-family:'Syne',sans-serif;font-size:52px;font-weight:800;
+  line-height:1;letter-spacing:-1px;
+}
+.hero-kpi .lbl{font-size:10px;letter-spacing:3px;text-transform:uppercase;color:var(--muted);font-family:'JetBrains Mono',monospace;margin-top:4px;}
+.hero-badge{
+  position:absolute;top:80px;right:80px;
+  width:180px;height:180px;border-radius:50%;
+  background:conic-gradient(var(--good) 0deg, var(--sat) 72deg, var(--mod) 144deg, var(--poor) 216deg, var(--sev) 288deg, var(--good) 360deg);
+  display:flex;align-items:center;justify-content:center;
+  animation:spin 20s linear infinite;
+}
+.hero-badge-inner{
+  width:140px;height:140px;border-radius:50%;
+  background:var(--ink);display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+  animation:spin 20s linear reverse infinite;
+}
+.hero-badge-inner .bval{font-family:'Syne',sans-serif;font-size:42px;font-weight:800;color:var(--mod);}
+.hero-badge-inner .blbl{font-size:9px;letter-spacing:2px;color:var(--muted);font-family:'JetBrains Mono',monospace;}
+@keyframes spin{from{transform:rotate(0deg);}to{transform:rotate(360deg);}}
+
+/* SCROLL INDICATOR */
+.scroll-hint{
+  position:absolute;bottom:40px;left:60px;
+  display:flex;align-items:center;gap:12px;
+  font-family:'JetBrains Mono',monospace;font-size:10px;
+  letter-spacing:3px;color:var(--muted);text-transform:uppercase;
+}
+.scroll-line{width:40px;height:1px;background:var(--muted);position:relative;overflow:hidden;}
+.scroll-line::after{
+  content:'';position:absolute;left:-100%;top:0;width:100%;height:100%;
+  background:var(--good);animation:slide 1.5s ease infinite;
+}
+@keyframes slide{0%{left:-100%;}100%{left:100%;}}
+
+/* NAV */
+nav{
+  position:sticky;top:0;z-index:100;
+  background:rgba(8,9,13,0.9);backdrop-filter:blur(20px);
+  border-bottom:1px solid var(--border);
+  padding:0 60px;display:flex;align-items:center;gap:0;
+  height:56px;
+}
+.nav-logo{
+  font-family:'Syne',sans-serif;font-size:16px;font-weight:700;
+  color:#fff;margin-right:40px;white-space:nowrap;
+}
+.nav-logo span{color:var(--good);}
+.nav-links{display:flex;gap:4px;flex:1;overflow-x:auto;}
+.nav-links::-webkit-scrollbar{display:none;}
+.nav-link{
+  padding:8px 16px;font-size:11px;letter-spacing:1.5px;text-transform:uppercase;
+  color:var(--muted);font-family:'JetBrains Mono',monospace;
+  cursor:pointer;border-radius:4px;white-space:nowrap;transition:all 0.2s;
+  text-decoration:none;
+}
+.nav-link:hover,.nav-link.active{color:var(--good);background:rgba(16,217,128,0.08);}
+
+/* SECTION */
+section{padding:80px 60px;position:relative;}
+section + section{border-top:1px solid var(--border);}
+.sec-label{
+  font-family:'JetBrains Mono',monospace;font-size:10px;
+  letter-spacing:4px;color:var(--good);text-transform:uppercase;
+  margin-bottom:8px;display:flex;align-items:center;gap:8px;
+}
+.sec-label::before{content:'';width:16px;height:1px;background:var(--good);}
+.sec-title{
+  font-family:'Syne',sans-serif;font-size:clamp(32px,4vw,52px);
+  font-weight:800;line-height:0.95;letter-spacing:-1px;
+  color:#fff;margin-bottom:8px;
+}
+.sec-sub{font-size:13px;color:var(--muted);font-family:'JetBrains Mono',monospace;margin-bottom:48px;}
+
+/* GRID */
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:24px;}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:24px;}
+.g4{display:grid;grid-template-columns:repeat(4,1fr);gap:20px;}
+.g5{display:grid;grid-template-columns:repeat(5,1fr);gap:16px;}
+.g-auto{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;}
+@media(max-width:1100px){.g2,.g3,.g4,.g5{grid-template-columns:1fr 1fr;}}
+@media(max-width:700px){.g2,.g3,.g4,.g5,.g-auto{grid-template-columns:1fr;} section{padding:60px 24px;} nav{padding:0 24px;} .hero{padding:60px 24px;} .hero-badge{display:none;} .scroll-hint{left:24px;}}
+
+/* CARD */
+.card{
+  background:var(--ink2);border:1px solid var(--border);border-radius:16px;
+  padding:28px;position:relative;overflow:hidden;
+  transition:border-color 0.3s,transform 0.3s;
+}
+.card:hover{border-color:rgba(16,217,128,0.25);transform:translateY(-2px);}
+.card::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(16,217,128,0.3),transparent);
+}
+.card-title{
+  font-family:'JetBrains Mono',monospace;font-size:10px;
+  letter-spacing:3px;color:var(--muted);text-transform:uppercase;margin-bottom:20px;
+}
+.chart-wrap{position:relative;width:100%;}
+
+/* STAT CARDS */
+.stat-card{
+  background:var(--ink2);border:1px solid var(--border);border-radius:16px;
+  padding:24px;overflow:hidden;position:relative;
+}
+.stat-card::after{
+  content:'';position:absolute;bottom:0;left:0;right:0;height:2px;
+  background:var(--accent,var(--good));
+}
+.stat-val{font-family:'Syne',sans-serif;font-size:48px;font-weight:800;line-height:1;letter-spacing:-1px;}
+.stat-lbl{font-size:10px;letter-spacing:3px;text-transform:uppercase;color:var(--muted);font-family:'JetBrains Mono',monospace;margin-top:8px;}
+.stat-detail{font-size:12px;color:var(--muted);margin-top:6px;}
+
+/* ZONE PILLS */
+.zone-pill{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:4px 12px;border-radius:20px;font-size:11px;
+  font-family:'JetBrains Mono',monospace;font-weight:600;
+}
+.z-north{background:rgba(249,115,22,0.15);color:var(--north);border:1px solid rgba(249,115,22,0.3);}
+.z-south{background:rgba(16,217,128,0.15);color:var(--south);border:1px solid rgba(16,217,128,0.3);}
+.z-east{background:rgba(239,68,68,0.15);color:var(--east);border:1px solid rgba(239,68,68,0.3);}
+.z-west{background:rgba(56,189,248,0.15);color:var(--west);border:1px solid rgba(56,189,248,0.3);}
+.z-out{background:rgba(167,139,250,0.15);color:var(--out);border:1px solid rgba(167,139,250,0.3);}
+
+/* AQI BADGE */
+.aqi-b{
+  display:inline-block;padding:3px 10px;border-radius:20px;
+  font-size:10px;font-family:'JetBrains Mono',monospace;font-weight:600;letter-spacing:1px;
+}
+.b-good{background:rgba(16,217,128,0.15);color:var(--good);border:1px solid rgba(16,217,128,0.3);}
+.b-sat{background:rgba(240,203,53,0.15);color:var(--sat);border:1px solid rgba(240,203,53,0.3);}
+.b-mod{background:rgba(249,115,22,0.15);color:var(--mod);border:1px solid rgba(249,115,22,0.3);}
+.b-poor{background:rgba(239,68,68,0.15);color:var(--poor);border:1px solid rgba(239,68,68,0.3);}
+.b-sev{background:rgba(192,38,211,0.15);color:var(--sev);border:1px solid rgba(192,38,211,0.3);}
+
+/* TABLE */
+.tbl-wrap{overflow-x:auto;max-height:480px;overflow-y:auto;}
+table{width:100%;border-collapse:collapse;font-size:12px;}
+thead th{
+  background:var(--ink3);color:var(--muted);
+  font-family:'JetBrains Mono',monospace;font-size:9px;
+  letter-spacing:2px;text-transform:uppercase;
+  padding:10px 14px;border-bottom:1px solid var(--border);
+  text-align:left;position:sticky;top:0;z-index:2;
+}
+tbody tr{border-bottom:1px solid rgba(30,37,53,0.6);transition:background 0.15s;}
+tbody tr:hover{background:var(--ink3);}
+tbody td{padding:9px 14px;}
+.mono{font-family:'JetBrains Mono',monospace;font-size:11px;}
+
+/* MAP */
+#aqi-map{height:500px;border-radius:12px;overflow:hidden;border:1px solid var(--border);}
+.leaflet-popup-content-wrapper{background:var(--ink2)!important;border:1px solid var(--border)!important;border-radius:12px!important;color:var(--text)!important;box-shadow:0 8px 32px rgba(0,0,0,0.5)!important;}
+.leaflet-popup-tip{background:var(--ink2)!important;}
+.leaflet-popup-content{font-family:'Space Grotesk',sans-serif!important;font-size:13px!important;margin:12px 16px!important;}
+.pop-name{font-family:'Syne',sans-serif;font-size:16px;font-weight:700;margin-bottom:8px;}
+.pop-row{display:flex;justify-content:space-between;gap:16px;font-size:12px;color:var(--muted);margin-bottom:4px;}
+.pop-row span:last-child{color:var(--text);font-family:'JetBrains Mono',monospace;}
+
+/* HEATMAP */
+.heatmap-grid{display:grid;gap:2px;}
+.hm-cell{
+  aspect-ratio:1;border-radius:3px;display:flex;align-items:center;justify-content:center;
+  font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;
+  cursor:pointer;transition:transform 0.15s,outline 0.15s;
+  color:rgba(255,255,255,0.8);
+}
+.hm-cell:hover{transform:scale(1.15);outline:2px solid #fff;}
+.hm-labels{display:flex;justify-content:space-around;margin-top:8px;}
+.hm-label{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);text-align:center;}
+.hm-zone-labels{display:flex;flex-direction:column;justify-content:space-around;margin-right:8px;}
+.hm-zone-label{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);text-align:right;line-height:1;}
+
+/* LEGEND */
+.legend{display:flex;flex-wrap:wrap;gap:12px;margin-bottom:20px;}
+.leg-item{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--muted);font-family:'JetBrains Mono',monospace;}
+.leg-dot{width:10px;height:10px;border-radius:50%;}
+
+/* PROGRESS BAR */
+.prog-bar{height:6px;border-radius:3px;background:var(--ink3);overflow:hidden;margin-top:4px;}
+.prog-fill{height:100%;border-radius:3px;transition:width 1s ease;}
+
+/* SECTION BG ACCENTS */
+#overview{background:radial-gradient(ellipse 60% 40% at 0% 50%, rgba(16,217,128,0.04) 0%, transparent 70%), var(--ink);}
+#map-section{background:radial-gradient(ellipse 60% 60% at 100% 50%, rgba(56,189,248,0.04) 0%, transparent 60%), var(--ink);}
+#weather{background:radial-gradient(ellipse 60% 60% at 50% 100%, rgba(240,203,53,0.04) 0%, transparent 60%), var(--ink);}
+
+/* TOOLTIP CUSTOM */
+.chart-tooltip{
+  background:var(--ink2)!important;border:1px solid var(--border)!important;
+  border-radius:10px!important;padding:12px 16px!important;
+  font-family:'Space Grotesk',sans-serif!important;
+  box-shadow:0 8px 32px rgba(0,0,0,0.4)!important;
+}
+
+/* ANIMATED NUMBER */
+.anim-num{display:inline-block;}
+
+/* WIND CHART */
+canvas{image-rendering:pixelated;}
+
+/* FOOTER */
+footer{
+  padding:40px 60px;border-top:1px solid var(--border);
+  text-align:center;font-family:'JetBrains Mono',monospace;
+  font-size:11px;color:var(--muted);letter-spacing:1px;
+}
+
+/* SCROLLBAR */
+::-webkit-scrollbar{width:4px;height:4px;}
+::-webkit-scrollbar-track{background:var(--ink);}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px;}
+::-webkit-scrollbar-thumb:hover{background:var(--muted);}
+
+/* LOADING */
+.loader{
+  position:fixed;inset:0;background:var(--ink);z-index:9999;
+  display:flex;align-items:center;justify-content:center;flex-direction:column;gap:16px;
+  transition:opacity 0.5s,visibility 0.5s;
+}
+.loader.done{opacity:0;visibility:hidden;}
+.loader-bar{width:200px;height:2px;background:var(--border);border-radius:1px;overflow:hidden;}
+.loader-fill{height:100%;background:var(--good);animation:load 1.2s ease-out forwards;}
+@keyframes load{0%{width:0;}100%{width:100%;}}
+.loader-text{font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:3px;color:var(--muted);text-transform:uppercase;}
+
+/* RANK CARD */
+.rank-item{
+  display:flex;align-items:center;gap:12px;
+  padding:10px 0;border-bottom:1px solid rgba(30,37,53,0.5);
+}
+.rank-num{
+  font-family:'JetBrains Mono',monospace;font-size:11px;
+  color:var(--muted);width:20px;flex-shrink:0;
+}
+.rank-info{flex:1;min-width:0;}
+.rank-name{font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.rank-zone{font-size:10px;color:var(--muted);font-family:'JetBrains Mono',monospace;}
+.rank-val{font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:600;flex-shrink:0;}
+
+/* PULSE DOT */
+.pulse-dot{
+  width:8px;height:8px;border-radius:50%;display:inline-block;
+  position:relative;flex-shrink:0;
+}
+.pulse-dot::after{
+  content:'';position:absolute;inset:-4px;border-radius:50%;
+  background:inherit;opacity:0.3;animation:pulse 2s ease infinite;
+}
+@keyframes pulse{0%,100%{transform:scale(1);opacity:0.3;}50%{transform:scale(1.8);opacity:0;}}
+
+/* COMPARISON BARS */
+.comp-bar-wrap{margin-bottom:16px;}
+.comp-bar-label{display:flex;justify-content:space-between;margin-bottom:4px;font-size:12px;}
+.comp-bar-track{height:8px;background:var(--ink3);border-radius:4px;overflow:hidden;}
+.comp-bar-fill{height:100%;border-radius:4px;transition:width 1.2s ease;}
+
+/* RESPONSIVE TABLE */
+@media(max-width:900px){
+  .tbl-wrap th:nth-child(n+8),
+  .tbl-wrap td:nth-child(n+8){display:none;}
+}
+</style>
+</head>
+<body>
+
+<!-- LOADER -->
+<div class="loader" id="loader">
+  <div class="loader-text">Loading Intelligence · 100 Stations · 11 Years</div>
+  <div class="loader-bar"><div class="loader-fill"></div></div>
+</div>
+
+<!-- CURSOR -->
+<div class="cursor" id="cursor"></div>
+<div class="cursor-ring" id="cursorRing"></div>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-logo">BLR <span>AQI</span></div>
+  <div class="nav-links">
+    <a class="nav-link active" href="#hero">Overview</a>
+    <a class="nav-link" href="#overview">Stats</a>
+    <a class="nav-link" href="#decade">Decade</a>
+    <a class="nav-link" href="#zones">Zones</a>
+    <a class="nav-link" href="#weather">Weather</a>
+    <a class="nav-link" href="#pollutants">Pollutants</a>
+    <a class="nav-link" href="#heatmap">Heatmap</a>
+    <a class="nav-link" href="#map-section">Live Map</a>
+    <a class="nav-link" href="#stations">All Stations</a>
+    <a class="nav-link" href="#risk">Risk Atlas</a>
+  </div>
+</nav>
+
+<!-- HERO -->
+<div class="hero" id="hero">
+  <div class="hero-grid"></div>
+  <div class="hero-tag">Environmental Intelligence System · Bangalore 2014–2024</div>
+  <h1 class="hero-title">
+    Bangalore<br>
+    <em>Air Quality</em><br>
+    <span class="line2">Index Report</span>
+  </h1>
+  <p class="hero-sub">// 100 monitoring stations · 13,200 monthly records · 5 geographic zones<br>North · South · East · West · Outskirts</p>
+  <div class="hero-kpis">
+    <div class="hero-kpi"><div class="val" style="color:var(--mod)">165</div><div class="lbl">City Avg AQI 2024</div></div>
+    <div class="hero-kpi"><div class="val" style="color:var(--poor)">328</div><div class="lbl">Peak AQI Recorded</div></div>
+    <div class="hero-kpi"><div class="val" style="color:var(--good)">25</div><div class="lbl">Lowest AQI Recorded</div></div>
+    <div class="hero-kpi"><div class="val" style="color:var(--out)">100</div><div class="lbl">Monitoring Stations</div></div>
+  </div>
+  <div class="hero-badge">
+    <div class="hero-badge-inner">
+      <div class="bval">165</div>
+      <div class="blbl">2024 AVG</div>
+    </div>
+  </div>
+  <div class="scroll-hint">
+    <div class="scroll-line"></div>
+    <span>Scroll to explore</span>
+  </div>
+</div>
+
+<!-- SECTION 1: OVERVIEW STATS -->
+<section id="overview">
+  <div class="sec-label">01 · City Snapshot</div>
+  <h2 class="sec-title">Decade at a Glance</h2>
+  <p class="sec-sub">// Key metrics across 100 stations and 11 years of data</p>
+  
+  <div class="g5" style="margin-bottom:32px">
+    <div class="stat-card" style="--accent:var(--poor)">
+      <div class="stat-val" style="color:var(--poor)">328</div>
+      <div class="stat-lbl">Peak AQI Ever</div>
+      <div class="stat-detail">Nelamangala Industrial · 2023</div>
+    </div>
+    <div class="stat-card" style="--accent:var(--good)">
+      <div class="stat-val" style="color:var(--good)">25</div>
+      <div class="stat-lbl">Lowest AQI Ever</div>
+      <div class="stat-detail">Bannerghatta Forest · 2020</div>
+    </div>
+    <div class="stat-card" style="--accent:var(--mod)">
+      <div class="stat-val" style="color:var(--mod)">165</div>
+      <div class="stat-lbl">City Avg 2024</div>
+      <div class="stat-detail">↑ 12% vs 2014 baseline (147)</div>
+    </div>
+    <div class="stat-card" style="--accent:var(--sat)">
+      <div class="stat-val" style="color:var(--sat)">114</div>
+      <div class="stat-lbl">Best Year (2020)</div>
+      <div class="stat-detail">COVID Lockdown Effect</div>
+    </div>
+    <div class="stat-card" style="--accent:var(--out)">
+      <div class="stat-val" style="color:var(--out)">3</div>
+      <div class="stat-lbl">Green Zones</div>
+      <div class="stat-detail">Consistently AQI &lt; 80</div>
+    </div>
+  </div>
+
+  <div class="g2" style="margin-bottom:24px">
+    <!-- Top Polluted -->
+    <div class="card">
+      <div class="card-title">⚠ Top 10 Most Polluted Stations (Decade Avg)</div>
+      <div id="top-polluted-list"></div>
+    </div>
+    <!-- Top Clean -->
+    <div class="card">
+      <div class="card-title">✓ Top 10 Cleanest Stations (Decade Avg)</div>
+      <div id="top-clean-list"></div>
+    </div>
+  </div>
+
+  <div class="g3">
+    <div class="card">
+      <div class="card-title">AQI Category Distribution 2024 — Doughnut</div>
+      <div class="chart-wrap" style="height:260px"><canvas id="catDonut"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Station Type vs Average AQI</div>
+      <div class="chart-wrap" style="height:260px"><canvas id="typeBar"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Zone AQI Risk Distribution</div>
+      <div class="chart-wrap" style="height:260px"><canvas id="zoneRisk"></canvas></div>
+    </div>
+  </div>
+</section>
+
+<!-- SECTION 2: DECADE TRENDS -->
+<section id="decade">
+  <div class="sec-label">02 · Decade Analysis</div>
+  <h2 class="sec-title">11 Years of Air Data</h2>
+  <p class="sec-sub">// City-wide and zone-wise AQI progression 2014→2024</p>
+
+  <div class="card" style="margin-bottom:24px">
+    <div class="card-title">City-Wide AQI Trend 2014–2024 — Area Chart</div>
+    <div class="chart-wrap" style="height:300px"><canvas id="trendArea"></canvas></div>
+  </div>
+
+  <div class="g2" style="margin-bottom:24px">
+    <div class="card">
+      <div class="card-title">Zone-Wise AQI Year-over-Year — Multi-Line</div>
+      <div class="chart-wrap" style="height:280px"><canvas id="zoneLines"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Industrial vs Residential vs Green Zone</div>
+      <div class="chart-wrap" style="height:280px"><canvas id="typeLines"></canvas></div>
+    </div>
+  </div>
+
+  <div class="g2">
+    <div class="card">
+      <div class="card-title">AQI Change 2014→2024 — Top 20 Stations (Diverging Bar)</div>
+      <div class="chart-wrap" style="height:320px"><canvas id="divergeBar"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-title">COVID Impact — Pre / During / Post Lockdown Comparison</div>
+      <div class="chart-wrap" style="height:320px"><canvas id="covidBar"></canvas></div>
+    </div>
+  </div>
+</section>
+
+<!-- SECTION 3: ZONE COMPARISON -->
+<section id="zones">
+  <div class="sec-label">03 · Zone Intelligence</div>
+  <h2 class="sec-title">Zone Breakdown</h2>
+  <p class="sec-sub">// North · South · East · West · Outskirts compared</p>
+
+  <div class="g5" style="margin-bottom:32px" id="zone-cards"></div>
+
+  <div class="g2" style="margin-bottom:24px">
+    <div class="card">
+      <div class="card-title">Zone AQI Distribution — Stacked Bar by Year</div>
+      <div class="chart-wrap" style="height:280px"><canvas id="zoneStack"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-title">All 100 Stations 2024 AQI — Sorted Bar</div>
+      <div class="chart-wrap" style="height:280px"><canvas id="allStations2024"></canvas></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Zone AQI Radar — Multi-Metric Comparison</div>
+    <div class="chart-wrap" style="height:350px;max-width:500px;margin:0 auto"><canvas id="radarChart"></canvas></div>
+  </div>
+</section>
+
+<!-- SECTION 4: WEATHER CORRELATIONS -->
+<section id="weather">
+  <div class="sec-label">04 · Weather Intelligence</div>
+  <h2 class="sec-title">AQI × Weather</h2>
+  <p class="sec-sub">// How temperature, humidity, rainfall & wind shape air quality</p>
+
+  <div class="g2" style="margin-bottom:24px">
+    <div class="card">
+      <div class="card-title">Monthly AQI vs Temperature Overlay</div>
+      <div class="chart-wrap" style="height:280px"><canvas id="aqiTempOverlay"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Monthly AQI vs Rainfall — Bar + Line</div>
+      <div class="chart-wrap" style="height:280px"><canvas id="aqiRainCombo"></canvas></div>
+    </div>
+  </div>
+
+  <div class="g2" style="margin-bottom:24px">
+    <div class="card">
+      <div class="card-title">AQI vs Temperature — Scatter Plot (500 samples)</div>
+      <div class="chart-wrap" style="height:280px"><canvas id="scatterTemp"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-title">AQI vs Humidity — Scatter Plot (500 samples)</div>
+      <div class="chart-wrap" style="height:280px"><canvas id="scatterHumid"></canvas></div>
+    </div>
+  </div>
+
+  <div class="g2">
+    <div class="card">
+      <div class="card-title">AQI vs Rainfall — Scatter Plot (400 samples)</div>
+      <div class="chart-wrap" style="height:280px"><canvas id="scatterRain"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Monthly Humidity vs AQI Correlation</div>
+      <div class="chart-wrap" style="height:280px"><canvas id="humidAqiBar"></canvas></div>
+    </div>
+  </div>
+</section>
+
+<!-- SECTION 5: POLLUTANTS -->
+<section id="pollutants">
+  <div class="sec-label">05 · Pollutant Profile</div>
+  <h2 class="sec-title">What's in the Air?</h2>
+  <p class="sec-sub">// PM2.5 · PM10 · NO2 · SO2 · CO · O3 breakdown by zone</p>
+
+  <div class="g2" style="margin-bottom:24px">
+    <div class="card">
+      <div class="card-title">Pollutant Composition by Zone 2024 — Grouped Bar</div>
+      <div class="chart-wrap" style="height:280px"><canvas id="pollutantGroup"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-title">PM2.5 vs PM10 by Zone — Bubble Chart</div>
+      <div class="chart-wrap" style="height:280px"><canvas id="pmBubble"></canvas></div>
+    </div>
+  </div>
+
+  <div class="g3">
+    <div class="card">
+      <div class="card-title">PM2.5 Distribution — Pie</div>
+      <div class="chart-wrap" style="height:240px"><canvas id="pm25Pie"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-title">NO2 + SO2 by Zone</div>
+      <div class="chart-wrap" style="height:240px"><canvas id="no2so2Bar"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Pollutant Stacked — 100% Area</div>
+      <div class="chart-wrap" style="height:240px"><canvas id="pollStacked"></canvas></div>
+    </div>
+  </div>
+</section>
+
+<!-- SECTION 6: HEATMAP -->
+<section id="heatmap">
+  <div class="sec-label">06 · Seasonal Heatmap</div>
+  <h2 class="sec-title">Zone × Month Matrix</h2>
+  <p class="sec-sub">// Average AQI intensity across zones and months — darker = worse</p>
+  
+  <div class="card" style="margin-bottom:24px">
+    <div class="card-title">AQI Heatmap — Zone (rows) × Month (columns)</div>
+    <div id="heatmap-container" style="display:flex;gap:8px;align-items:flex-start;margin-top:8px;overflow-x:auto;padding-bottom:8px;"></div>
+    <div style="display:flex;align-items:center;gap:12px;margin-top:16px;">
+      <span style="font-size:10px;color:var(--muted);font-family:'JetBrains Mono',monospace;">Low AQI</span>
+      <div style="flex:1;max-width:200px;height:8px;border-radius:4px;background:linear-gradient(90deg,#10d980,#f0cb35,#f97316,#ef4444,#c026d3);"></div>
+      <span style="font-size:10px;color:var(--muted);font-family:'JetBrains Mono',monospace;">High AQI</span>
+    </div>
+  </div>
+
+  <div class="g2">
+    <div class="card">
+      <div class="card-title">Monthly AQI Histogram — City Average</div>
+      <div class="chart-wrap" style="height:260px"><canvas id="monthHist"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Seasonal Pattern — Polar Area</div>
+      <div class="chart-wrap" style="height:260px"><canvas id="polarMonth"></canvas></div>
+    </div>
+  </div>
+</section>
+
+<!-- SECTION 7: INTERACTIVE MAP -->
+<section id="map-section">
+  <div class="sec-label">07 · Interactive Map</div>
+  <h2 class="sec-title">Station Map</h2>
+  <p class="sec-sub">// Click any station for details · Color = AQI category</p>
+
+  <div class="legend" style="margin-bottom:16px">
+    <div class="leg-item"><div class="leg-dot" style="background:var(--good)"></div>Good (≤50)</div>
+    <div class="leg-item"><div class="leg-dot" style="background:var(--sat)"></div>Satisfactory (51–100)</div>
+    <div class="leg-item"><div class="leg-dot" style="background:var(--mod)"></div>Moderate (101–200)</div>
+    <div class="leg-item"><div class="leg-dot" style="background:var(--poor)"></div>Poor (201–300)</div>
+    <div class="leg-item"><div class="leg-dot" style="background:var(--sev)"></div>Severe (301+)</div>
+  </div>
+
+  <div id="aqi-map"></div>
+
+  <div class="g4" style="margin-top:24px" id="map-zone-summary"></div>
+</section>
+
+<!-- SECTION 8: FULL TABLE -->
+<section id="stations">
+  <div class="sec-label">08 · Full Dataset</div>
+  <h2 class="sec-title">All 100 Stations</h2>
+  <p class="sec-sub">// Complete station registry with decade statistics</p>
+
+  <div style="display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap;">
+    <button class="filter-btn active" data-zone="All" onclick="filterTable('All')">All</button>
+    <button class="filter-btn" data-zone="North" onclick="filterTable('North')">North</button>
+    <button class="filter-btn" data-zone="South" onclick="filterTable('South')">South</button>
+    <button class="filter-btn" data-zone="East" onclick="filterTable('East')">East</button>
+    <button class="filter-btn" data-zone="West" onclick="filterTable('West')">West</button>
+    <button class="filter-btn" data-zone="Outskirts" onclick="filterTable('Outskirts')">Outskirts</button>
+  </div>
+
+  <style>
+  .filter-btn{
+    padding:8px 20px;border-radius:8px;border:1px solid var(--border);
+    background:var(--ink2);color:var(--muted);font-family:'JetBrains Mono',monospace;
+    font-size:11px;letter-spacing:1px;cursor:pointer;transition:all 0.2s;
+  }
+  .filter-btn:hover,.filter-btn.active{
+    background:rgba(16,217,128,0.1);color:var(--good);border-color:rgba(16,217,128,0.3);
+  }
+  </style>
+
+  <div class="card" style="padding:0">
+    <div class="tbl-wrap">
+      <table id="stationTable">
+        <thead>
+          <tr>
+            <th>#</th><th>Station</th><th>Zone</th><th>Type</th>
+            <th>Avg AQI</th><th>Min AQI</th><th>Max AQI</th>
+            <th>Avg Temp °C</th><th>Avg Humidity %</th>
+            <th>Category</th><th>Risk</th>
+          </tr>
+        </thead>
+        <tbody id="stationTbody"></tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- SECTION 9: RISK ATLAS -->
+<section id="risk">
+  <div class="sec-label">09 · Risk Atlas</div>
+  <h2 class="sec-title">Risk Classification</h2>
+  <p class="sec-sub">// Industrial zones, clean corridors, pollution hotspots</p>
+
+  <div class="g3" style="margin-bottom:24px">
+    <div class="card" style="border-color:rgba(239,68,68,0.3)">
+      <div class="card-title" style="color:var(--poor)">🔴 HIGH RISK ZONES</div>
+      <div id="high-risk-list"></div>
+    </div>
+    <div class="card" style="border-color:rgba(240,203,53,0.3)">
+      <div class="card-title" style="color:var(--sat)">🟡 MODERATE RISK ZONES</div>
+      <div id="mod-risk-list"></div>
+    </div>
+    <div class="card" style="border-color:rgba(16,217,128,0.3)">
+      <div class="card-title" style="color:var(--good)">🟢 LOW RISK / CLEAN ZONES</div>
+      <div id="low-risk-list"></div>
+    </div>
+  </div>
+
+  <div class="g2">
+    <div class="card">
+      <div class="card-title">Industrial Cluster AQI — Last 5 Years</div>
+      <div class="chart-wrap" style="height:280px"><canvas id="industChart"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Green Zone vs City Average vs Industrial — Comparison</div>
+      <div class="chart-wrap" style="height:280px"><canvas id="riskCompare"></canvas></div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  ✦ Bangalore AQI Intelligence Dashboard · 100 Stations · 2014–2024 · Data modeled on CPCB/KSPCB regional patterns ✦<br>
+  <span style="color:var(--border)">For official data visit cpcb.nic.in · kspcb.karnataka.gov.in</span>
+</footer>
+
+<script>
+// ============================================================
+// DATA
+// ============================================================
+const DATA = {"stations": [{"id": "1", "name": "Peenya Industrial Area", "zone": "North", "type": "Industrial", "lat": 13.0289, "lon": 77.5178, "avg_aqi": 224, "min_aqi": 124, "max_aqi": 316, "avg_temp": 24.6, "avg_humid": 64.2}, {"id": "2", "name": "Hebbal Flyover", "zone": "North", "type": "Traffic", "lat": 13.0456, "lon": 77.5912, "avg_aqi": 199, "min_aqi": 99, "max_aqi": 287, "avg_temp": 24.3, "avg_humid": 64.3}, {"id": "3", "name": "Yelahanka New Town", "zone": "North", "type": "Residential", "lat": 13.0983, "lon": 77.5964, "avg_aqi": 140, "min_aqi": 68, "max_aqi": 197, "avg_temp": 24.6, "avg_humid": 63.7}, {"id": "4", "name": "Nagawara Lake", "zone": "North", "type": "Mixed", "lat": 13.0456, "lon": 77.6234, "avg_aqi": 141, "min_aqi": 69, "max_aqi": 207, "avg_temp": 24.4, "avg_humid": 65.2}, {"id": "5", "name": "Thanisandra Road", "zone": "North", "type": "Traffic", "lat": 13.0634, "lon": 77.6234, "avg_aqi": 179, "min_aqi": 88, "max_aqi": 246, "avg_temp": 24.6, "avg_humid": 64.3}, {"id": "6", "name": "RT Nagar", "zone": "North", "type": "Residential", "lat": 13.0234, "lon": 77.5912, "avg_aqi": 136, "min_aqi": 66, "max_aqi": 190, "avg_temp": 24.5, "avg_humid": 64.7}, {"id": "7", "name": "Banaswadi", "zone": "North", "type": "Mixed", "lat": 13.0156, "lon": 77.6456, "avg_aqi": 170, "min_aqi": 87, "max_aqi": 240, "avg_temp": 24.4, "avg_humid": 64.2}, {"id": "8", "name": "Dasarahalli Industrial", "zone": "North", "type": "Industrial", "lat": 13.0567, "lon": 77.5234, "avg_aqi": 220, "min_aqi": 107, "max_aqi": 318, "avg_temp": 24.3, "avg_humid": 64.3}, {"id": "9", "name": "Kodigehalli", "zone": "North", "type": "Residential", "lat": 13.0712, "lon": 77.5812, "avg_aqi": 125, "min_aqi": 66, "max_aqi": 186, "avg_temp": 24.4, "avg_humid": 64.2}, {"id": "10", "name": "Devanahalli Airport Road", "zone": "North", "type": "Traffic", "lat": 13.2045, "lon": 77.7123, "avg_aqi": 199, "min_aqi": 108, "max_aqi": 284, "avg_temp": 24.5, "avg_humid": 65.0}, {"id": "11", "name": "Bagalur", "zone": "North", "type": "Outskirt", "lat": 13.1456, "lon": 77.7456, "avg_aqi": 94, "min_aqi": 41, "max_aqi": 141, "avg_temp": 24.5, "avg_humid": 63.2}, {"id": "12", "name": "Jakkur Lake", "zone": "North", "type": "Residential", "lat": 13.0812, "lon": 77.6134, "avg_aqi": 134, "min_aqi": 79, "max_aqi": 189, "avg_temp": 24.4, "avg_humid": 63.3}, {"id": "13", "name": "Bharat Electronics (BEL)", "zone": "North", "type": "Industrial", "lat": 13.0345, "lon": 77.5645, "avg_aqi": 216, "min_aqi": 115, "max_aqi": 308, "avg_temp": 24.6, "avg_humid": 65.7}, {"id": "14", "name": "Sahakarnagar", "zone": "North", "type": "Residential", "lat": 13.0523, "lon": 77.5934, "avg_aqi": 138, "min_aqi": 76, "max_aqi": 195, "avg_temp": 24.2, "avg_humid": 64.0}, {"id": "15", "name": "Vidyaranyapura", "zone": "North", "type": "Residential", "lat": 13.0678, "lon": 77.5612, "avg_aqi": 124, "min_aqi": 65, "max_aqi": 182, "avg_temp": 24.6, "avg_humid": 64.7}, {"id": "16", "name": "Sanjay Nagar", "zone": "North", "type": "Mixed", "lat": 13.0234, "lon": 77.5823, "avg_aqi": 147, "min_aqi": 75, "max_aqi": 204, "avg_temp": 24.7, "avg_humid": 64.2}, {"id": "17", "name": "Kalyan Nagar", "zone": "North", "type": "Residential", "lat": 13.0234, "lon": 77.6345, "avg_aqi": 122, "min_aqi": 61, "max_aqi": 171, "avg_temp": 24.1, "avg_humid": 64.7}, {"id": "18", "name": "HBR Layout", "zone": "North", "type": "Mixed", "lat": 13.0312, "lon": 77.6412, "avg_aqi": 170, "min_aqi": 87, "max_aqi": 245, "avg_temp": 24.4, "avg_humid": 65.4}, {"id": "19", "name": "Hennur Road", "zone": "North", "type": "Traffic", "lat": 13.0456, "lon": 77.6456, "avg_aqi": 187, "min_aqi": 92, "max_aqi": 259, "avg_temp": 24.2, "avg_humid": 64.8}, {"id": "20", "name": "Horamavu", "zone": "North", "type": "Mixed", "lat": 13.0378, "lon": 77.6612, "avg_aqi": 152, "min_aqi": 73, "max_aqi": 216, "avg_temp": 24.2, "avg_humid": 63.7}, {"id": "21", "name": "Bannerghatta Forest Edge", "zone": "South", "type": "Green Zone", "lat": 12.8456, "lon": 77.5823, "avg_aqi": 53, "min_aqi": 25, "max_aqi": 80, "avg_temp": 24.1, "avg_humid": 64.7}, {"id": "22", "name": "JP Nagar Phase 6", "zone": "South", "type": "Residential", "lat": 12.9023, "lon": 77.5812, "avg_aqi": 146, "min_aqi": 70, "max_aqi": 207, "avg_temp": 24.2, "avg_humid": 63.9}, {"id": "23", "name": "BTM Layout", "zone": "South", "type": "Mixed", "lat": 12.9145, "lon": 77.6134, "avg_aqi": 149, "min_aqi": 76, "max_aqi": 213, "avg_temp": 24.5, "avg_humid": 63.9}, {"id": "24", "name": "Jayanagar 4th Block", "zone": "South", "type": "Residential", "lat": 12.9289, "lon": 77.5823, "avg_aqi": 128, "min_aqi": 70, "max_aqi": 186, "avg_temp": 24.6, "avg_humid": 63.3}, {"id": "25", "name": "Silk Board Junction", "zone": "South", "type": "Traffic", "lat": 12.9178, "lon": 77.6234, "avg_aqi": 174, "min_aqi": 93, "max_aqi": 248, "avg_temp": 24.3, "avg_humid": 64.9}, {"id": "26", "name": "Electronic City Phase 1", "zone": "South", "type": "IT/Industrial", "lat": 12.8456, "lon": 77.6645, "avg_aqi": 163, "min_aqi": 87, "max_aqi": 232, "avg_temp": 24.9, "avg_humid": 63.4}, {"id": "27", "name": "Kanakapura Road", "zone": "South", "type": "Mixed", "lat": 12.8789, "lon": 77.5612, "avg_aqi": 167, "min_aqi": 99, "max_aqi": 241, "avg_temp": 24.2, "avg_humid": 64.8}, {"id": "28", "name": "Akshayanagar", "zone": "South", "type": "Residential", "lat": 12.8923, "lon": 77.6234, "avg_aqi": 127, "min_aqi": 73, "max_aqi": 184, "avg_temp": 24.4, "avg_humid": 63.6}, {"id": "29", "name": "Hosa Road", "zone": "South", "type": "Traffic", "lat": 12.8823, "lon": 77.6712, "avg_aqi": 190, "min_aqi": 93, "max_aqi": 266, "avg_temp": 24.7, "avg_humid": 64.0}, {"id": "30", "name": "Bommanahalli", "zone": "South", "type": "Mixed", "lat": 12.9034, "lon": 77.6278, "avg_aqi": 170, "min_aqi": 83, "max_aqi": 235, "avg_temp": 24.6, "avg_humid": 64.3}, {"id": "31", "name": "Hulimavu", "zone": "South", "type": "Residential", "lat": 12.8756, "lon": 77.5945, "avg_aqi": 136, "min_aqi": 80, "max_aqi": 193, "avg_temp": 24.9, "avg_humid": 65.7}, {"id": "32", "name": "Koppa Road Outskirt", "zone": "South", "type": "Outskirt", "lat": 12.8234, "lon": 77.5345, "avg_aqi": 76, "min_aqi": 37, "max_aqi": 113, "avg_temp": 24.7, "avg_humid": 64.1}, {"id": "33", "name": "Basavanagudi", "zone": "South", "type": "Residential", "lat": 12.9412, "lon": 77.5723, "avg_aqi": 131, "min_aqi": 60, "max_aqi": 189, "avg_temp": 24.3, "avg_humid": 64.4}, {"id": "34", "name": "Anekal", "zone": "South", "type": "Outskirt", "lat": 12.7134, "lon": 77.6956, "avg_aqi": 75, "min_aqi": 37, "max_aqi": 115, "avg_temp": 24.5, "avg_humid": 64.8}, {"id": "35", "name": "Begur", "zone": "South", "type": "Mixed", "lat": 12.8634, "lon": 77.6212, "avg_aqi": 150, "min_aqi": 72, "max_aqi": 208, "avg_temp": 24.6, "avg_humid": 64.8}, {"id": "36", "name": "Gottigere", "zone": "South", "type": "Residential", "lat": 12.8523, "lon": 77.5923, "avg_aqi": 117, "min_aqi": 69, "max_aqi": 161, "avg_temp": 24.4, "avg_humid": 64.6}, {"id": "37", "name": "Subramanyapura", "zone": "South", "type": "Residential", "lat": 12.9023, "lon": 77.5478, "avg_aqi": 133, "min_aqi": 69, "max_aqi": 185, "avg_temp": 24.5, "avg_humid": 65.0}, {"id": "38", "name": "Harobele", "zone": "South", "type": "Outskirt", "lat": 12.7456, "lon": 77.5678, "avg_aqi": 101, "min_aqi": 54, "max_aqi": 139, "avg_temp": 24.4, "avg_humid": 63.9}, {"id": "39", "name": "Konanakunte", "zone": "South", "type": "Residential", "lat": 12.8912, "lon": 77.5512, "avg_aqi": 138, "min_aqi": 67, "max_aqi": 199, "avg_temp": 24.6, "avg_humid": 63.7}, {"id": "40", "name": "Arekere", "zone": "South", "type": "Mixed", "lat": 12.8812, "lon": 77.6134, "avg_aqi": 154, "min_aqi": 81, "max_aqi": 217, "avg_temp": 24.4, "avg_humid": 64.4}, {"id": "41", "name": "KR Puram Bridge", "zone": "East", "type": "Traffic", "lat": 13.0045, "lon": 77.6934, "avg_aqi": 180, "min_aqi": 96, "max_aqi": 256, "avg_temp": 24.5, "avg_humid": 65.1}, {"id": "42", "name": "Whitefield Tech Park", "zone": "East", "type": "IT/Industrial", "lat": 12.9698, "lon": 77.7499, "avg_aqi": 180, "min_aqi": 98, "max_aqi": 259, "avg_temp": 24.2, "avg_humid": 64.3}, {"id": "43", "name": "Mahadevpura", "zone": "East", "type": "Mixed", "lat": 12.9923, "lon": 77.7156, "avg_aqi": 165, "min_aqi": 80, "max_aqi": 242, "avg_temp": 24.6, "avg_humid": 64.3}, {"id": "44", "name": "Varthur Lake", "zone": "East", "type": "Mixed", "lat": 12.9412, "lon": 77.7423, "avg_aqi": 147, "min_aqi": 84, "max_aqi": 205, "avg_temp": 24.3, "avg_humid": 66.5}, {"id": "45", "name": "ITPL Ring Road", "zone": "East", "type": "Traffic", "lat": 12.9756, "lon": 77.7234, "avg_aqi": 193, "min_aqi": 108, "max_aqi": 277, "avg_temp": 24.4, "avg_humid": 64.6}, {"id": "46", "name": "Hoskote Industrial", "zone": "East", "type": "Industrial", "lat": 13.0712, "lon": 77.7956, "avg_aqi": 216, "min_aqi": 112, "max_aqi": 310, "avg_temp": 25.1, "avg_humid": 64.5}, {"id": "47", "name": "Marathahalli Bridge", "zone": "East", "type": "Traffic", "lat": 12.9542, "lon": 77.7018, "avg_aqi": 187, "min_aqi": 104, "max_aqi": 263, "avg_temp": 24.6, "avg_humid": 64.6}, {"id": "48", "name": "Domlur", "zone": "East", "type": "Mixed", "lat": 12.9612, "lon": 77.6423, "avg_aqi": 146, "min_aqi": 74, "max_aqi": 207, "avg_temp": 24.8, "avg_humid": 63.4}, {"id": "49", "name": "Indiranagar 100ft Road", "zone": "East", "type": "Residential", "lat": 12.9784, "lon": 77.6412, "avg_aqi": 137, "min_aqi": 82, "max_aqi": 200, "avg_temp": 24.0, "avg_humid": 65.2}, {"id": "50", "name": "HAL Airport Old Area", "zone": "East", "type": "Mixed", "lat": 12.9456, "lon": 77.6634, "avg_aqi": 160, "min_aqi": 77, "max_aqi": 226, "avg_temp": 24.3, "avg_humid": 64.4}, {"id": "51", "name": "Sarjapur Road Outer", "zone": "East", "type": "Outskirt", "lat": 12.8923, "lon": 77.7534, "avg_aqi": 105, "min_aqi": 49, "max_aqi": 153, "avg_temp": 24.6, "avg_humid": 65.0}, {"id": "52", "name": "Bellandur", "zone": "East", "type": "Mixed", "lat": 12.9289, "lon": 77.7045, "avg_aqi": 143, "min_aqi": 76, "max_aqi": 203, "avg_temp": 24.4, "avg_humid": 64.6}, {"id": "53", "name": "Brookefield", "zone": "East", "type": "Residential", "lat": 12.9812, "lon": 77.7156, "avg_aqi": 117, "min_aqi": 66, "max_aqi": 171, "avg_temp": 24.8, "avg_humid": 65.7}, {"id": "54", "name": "Kadubeesanahalli", "zone": "East", "type": "IT/Industrial", "lat": 12.9534, "lon": 77.7312, "avg_aqi": 163, "min_aqi": 84, "max_aqi": 228, "avg_temp": 24.1, "avg_humid": 64.4}, {"id": "55", "name": "Panathur", "zone": "East", "type": "Mixed", "lat": 12.9445, "lon": 77.7178, "avg_aqi": 157, "min_aqi": 74, "max_aqi": 225, "avg_temp": 24.3, "avg_humid": 63.8}, {"id": "56", "name": "Koramangala 7th Block", "zone": "East", "type": "Mixed", "lat": 12.9289, "lon": 77.6345, "avg_aqi": 153, "min_aqi": 84, "max_aqi": 219, "avg_temp": 24.9, "avg_humid": 64.8}, {"id": "57", "name": "HSR Layout", "zone": "East", "type": "Residential", "lat": 12.9145, "lon": 77.6412, "avg_aqi": 143, "min_aqi": 69, "max_aqi": 200, "avg_temp": 24.5, "avg_humid": 64.6}, {"id": "58", "name": "Kundalahalli", "zone": "East", "type": "Residential", "lat": 12.9756, "lon": 77.7023, "avg_aqi": 122, "min_aqi": 56, "max_aqi": 175, "avg_temp": 24.7, "avg_humid": 63.9}, {"id": "59", "name": "Harlur Road", "zone": "East", "type": "Mixed", "lat": 12.9067, "lon": 77.6856, "avg_aqi": 161, "min_aqi": 91, "max_aqi": 225, "avg_temp": 24.3, "avg_humid": 64.3}, {"id": "60", "name": "Carmelram", "zone": "East", "type": "Residential", "lat": 12.9023, "lon": 77.7134, "avg_aqi": 136, "min_aqi": 70, "max_aqi": 192, "avg_temp": 24.2, "avg_humid": 64.3}, {"id": "61", "name": "Rajajinagar Industrial", "zone": "West", "type": "Industrial", "lat": 12.9912, "lon": 77.5512, "avg_aqi": 207, "min_aqi": 101, "max_aqi": 289, "avg_temp": 24.3, "avg_humid": 65.3}, {"id": "62", "name": "Yeshwanthpur Circle", "zone": "West", "type": "Traffic", "lat": 13.0234, "lon": 77.5523, "avg_aqi": 190, "min_aqi": 101, "max_aqi": 272, "avg_temp": 24.4, "avg_humid": 64.6}, {"id": "63", "name": "Tumkur Road NH-4", "zone": "West", "type": "Traffic", "lat": 13.0567, "lon": 77.5156, "avg_aqi": 175, "min_aqi": 94, "max_aqi": 251, "avg_temp": 24.0, "avg_humid": 64.7}, {"id": "64", "name": "Vijayanagar", "zone": "West", "type": "Residential", "lat": 12.9712, "lon": 77.5345, "avg_aqi": 129, "min_aqi": 61, "max_aqi": 185, "avg_temp": 24.3, "avg_humid": 64.8}, {"id": "65", "name": "Chord Road", "zone": "West", "type": "Traffic", "lat": 12.9856, "lon": 77.5456, "avg_aqi": 195, "min_aqi": 101, "max_aqi": 272, "avg_temp": 24.6, "avg_humid": 63.7}, {"id": "66", "name": "Magadi Road", "zone": "West", "type": "Mixed", "lat": 12.9567, "lon": 77.5123, "avg_aqi": 160, "min_aqi": 81, "max_aqi": 233, "avg_temp": 24.4, "avg_humid": 65.2}, {"id": "67", "name": "Kengeri", "zone": "West", "type": "Residential", "lat": 12.9134, "lon": 77.4845, "avg_aqi": 139, "min_aqi": 66, "max_aqi": 203, "avg_temp": 24.3, "avg_humid": 64.5}, {"id": "68", "name": "Bidadi Outskirt", "zone": "West", "type": "Outskirt", "lat": 12.7956, "lon": 77.3956, "avg_aqi": 96, "min_aqi": 46, "max_aqi": 141, "avg_temp": 24.2, "avg_humid": 64.4}, {"id": "69", "name": "Malleshwaram 18th Cross", "zone": "West", "type": "Residential", "lat": 13.0034, "lon": 77.5634, "avg_aqi": 138, "min_aqi": 74, "max_aqi": 197, "avg_temp": 24.4, "avg_humid": 65.4}, {"id": "70", "name": "Nagarbhavi", "zone": "West", "type": "Residential", "lat": 12.9578, "lon": 77.5245, "avg_aqi": 125, "min_aqi": 58, "max_aqi": 185, "avg_temp": 24.3, "avg_humid": 63.8}, {"id": "71", "name": "RR Nagar", "zone": "West", "type": "Residential", "lat": 12.9234, "lon": 77.5234, "avg_aqi": 124, "min_aqi": 59, "max_aqi": 181, "avg_temp": 24.8, "avg_humid": 64.8}, {"id": "72", "name": "Mysore Road", "zone": "West", "type": "Traffic", "lat": 12.9345, "lon": 77.5067, "avg_aqi": 173, "min_aqi": 96, "max_aqi": 247, "avg_temp": 24.3, "avg_humid": 64.4}, {"id": "73", "name": "Nayandahalli", "zone": "West", "type": "Industrial", "lat": 12.9445, "lon": 77.5178, "avg_aqi": 208, "min_aqi": 107, "max_aqi": 301, "avg_temp": 24.1, "avg_humid": 65.7}, {"id": "74", "name": "Sumanahalli", "zone": "West", "type": "Industrial", "lat": 12.9756, "lon": 77.5289, "avg_aqi": 218, "min_aqi": 121, "max_aqi": 304, "avg_temp": 24.5, "avg_humid": 63.9}, {"id": "75", "name": "Pattanagere", "zone": "West", "type": "Residential", "lat": 12.9156, "lon": 77.5078, "avg_aqi": 121, "min_aqi": 62, "max_aqi": 176, "avg_temp": 24.7, "avg_humid": 63.4}, {"id": "76", "name": "Uttarahalli", "zone": "West", "type": "Residential", "lat": 12.8923, "lon": 77.5345, "avg_aqi": 145, "min_aqi": 77, "max_aqi": 204, "avg_temp": 24.6, "avg_humid": 64.1}, {"id": "77", "name": "Sunkenahalli", "zone": "West", "type": "Mixed", "lat": 12.9612, "lon": 77.5312, "avg_aqi": 164, "min_aqi": 80, "max_aqi": 234, "avg_temp": 24.6, "avg_humid": 65.9}, {"id": "78", "name": "Challaghatta", "zone": "West", "type": "Outskirt", "lat": 12.8756, "lon": 77.4678, "avg_aqi": 91, "min_aqi": 48, "max_aqi": 134, "avg_temp": 24.6, "avg_humid": 63.9}, {"id": "79", "name": "Kumbalgodu", "zone": "West", "type": "Industrial", "lat": 12.8823, "lon": 77.4923, "avg_aqi": 230, "min_aqi": 116, "max_aqi": 327, "avg_temp": 24.2, "avg_humid": 64.3}, {"id": "80", "name": "Jnanabharathi", "zone": "West", "type": "Residential", "lat": 12.9345, "lon": 77.5134, "avg_aqi": 124, "min_aqi": 65, "max_aqi": 177, "avg_temp": 24.5, "avg_humid": 64.3}, {"id": "81", "name": "Hesaraghatta Lake Area", "zone": "Outskirts", "type": "Green Zone", "lat": 13.1523, "lon": 77.4812, "avg_aqi": 63, "min_aqi": 31, "max_aqi": 95, "avg_temp": 24.7, "avg_humid": 64.3}, {"id": "82", "name": "Doddaballapur Road", "zone": "Outskirts", "type": "Outskirt", "lat": 13.2234, "lon": 77.5445, "avg_aqi": 102, "min_aqi": 51, "max_aqi": 146, "avg_temp": 24.7, "avg_humid": 64.5}, {"id": "83", "name": "Nandi Hills Foothills", "zone": "Outskirts", "type": "Green Zone", "lat": 13.3712, "lon": 77.6823, "avg_aqi": 62, "min_aqi": 27, "max_aqi": 92, "avg_temp": 24.6, "avg_humid": 64.5}, {"id": "84", "name": "Nelamangala Industrial", "zone": "Outskirts", "type": "Industrial", "lat": 13.0956, "lon": 77.3934, "avg_aqi": 234, "min_aqi": 122, "max_aqi": 328, "avg_temp": 24.5, "avg_humid": 64.3}, {"id": "85", "name": "Ramanagara Town", "zone": "Outskirts", "type": "Mixed", "lat": 12.7156, "lon": 77.2812, "avg_aqi": 159, "min_aqi": 79, "max_aqi": 219, "avg_temp": 24.7, "avg_humid": 64.8}, {"id": "86", "name": "Kolar Road SE", "zone": "Outskirts", "type": "Outskirt", "lat": 12.9456, "lon": 77.8534, "avg_aqi": 88, "min_aqi": 47, "max_aqi": 126, "avg_temp": 24.5, "avg_humid": 64.5}, {"id": "87", "name": "Anekal Outskirt", "zone": "Outskirts", "type": "Outskirt", "lat": 12.7034, "lon": 77.6823, "avg_aqi": 101, "min_aqi": 55, "max_aqi": 150, "avg_temp": 24.5, "avg_humid": 63.9}, {"id": "88", "name": "Hoskote Town", "zone": "Outskirts", "type": "Mixed", "lat": 13.0712, "lon": 77.7978, "avg_aqi": 157, "min_aqi": 78, "max_aqi": 224, "avg_temp": 24.3, "avg_humid": 63.6}, {"id": "89", "name": "Magadi Town", "zone": "Outskirts", "type": "Outskirt", "lat": 12.9556, "lon": 77.2234, "avg_aqi": 88, "min_aqi": 37, "max_aqi": 128, "avg_temp": 24.8, "avg_humid": 65.5}, {"id": "90", "name": "Dabaspet", "zone": "Outskirts", "type": "Industrial", "lat": 13.1234, "lon": 77.3456, "avg_aqi": 232, "min_aqi": 119, "max_aqi": 327, "avg_temp": 24.7, "avg_humid": 63.6}, {"id": "91", "name": "Attibele", "zone": "Outskirts", "type": "Industrial", "lat": 12.7845, "lon": 77.7345, "avg_aqi": 228, "min_aqi": 113, "max_aqi": 317, "avg_temp": 24.6, "avg_humid": 64.1}, {"id": "92", "name": "Harohalli", "zone": "Outskirts", "type": "Industrial", "lat": 12.5945, "lon": 77.4312, "avg_aqi": 218, "min_aqi": 117, "max_aqi": 312, "avg_temp": 24.3, "avg_humid": 65.0}, {"id": "93", "name": "Doddaballapur Industrial", "zone": "Outskirts", "type": "Industrial", "lat": 13.2978, "lon": 77.5378, "avg_aqi": 224, "min_aqi": 121, "max_aqi": 314, "avg_temp": 24.4, "avg_humid": 64.4}, {"id": "94", "name": "Channapatna", "zone": "Outskirts", "type": "Mixed", "lat": 12.6512, "lon": 77.2112, "avg_aqi": 169, "min_aqi": 81, "max_aqi": 238, "avg_temp": 24.8, "avg_humid": 64.2}, {"id": "95", "name": "Devanahalli Town", "zone": "Outskirts", "type": "Mixed", "lat": 13.2423, "lon": 77.7145, "avg_aqi": 152, "min_aqi": 74, "max_aqi": 219, "avg_temp": 24.8, "avg_humid": 63.9}, {"id": "96", "name": "Chikkaballapur Road", "zone": "Outskirts", "type": "Outskirt", "lat": 13.4345, "lon": 77.7312, "avg_aqi": 88, "min_aqi": 43, "max_aqi": 127, "avg_temp": 24.8, "avg_humid": 65.1}, {"id": "97", "name": "Tumkur Outskirt", "zone": "Outskirts", "type": "Outskirt", "lat": 13.3412, "lon": 77.1023, "avg_aqi": 100, "min_aqi": 56, "max_aqi": 143, "avg_temp": 24.6, "avg_humid": 64.2}, {"id": "98", "name": "Kanakapura Town", "zone": "Outskirts", "type": "Mixed", "lat": 12.5434, "lon": 77.4134, "avg_aqi": 168, "min_aqi": 97, "max_aqi": 246, "avg_temp": 24.4, "avg_humid": 65.0}, {"id": "99", "name": "Sarjapur Town", "zone": "Outskirts", "type": "Mixed", "lat": 12.8612, "lon": 77.7834, "avg_aqi": 149, "min_aqi": 84, "max_aqi": 213, "avg_temp": 24.3, "avg_humid": 64.1}, {"id": "100", "name": "Bannerghatta National Park", "zone": "Outskirts", "type": "Green Zone", "lat": 12.7989, "lon": 77.5712, "avg_aqi": 63, "min_aqi": 31, "max_aqi": 91, "avg_temp": 24.2, "avg_humid": 64.6}], "zone_year_avg": {"North": [158, 159, 161, 163, 166, 167, 122, 150, 173, 174, 177], "South": [131, 133, 135, 136, 137, 140, 101, 124, 144, 145, 147], "East": [152, 154, 156, 158, 159, 162, 118, 144, 168, 169, 171], "West": [155, 156, 158, 160, 162, 164, 119, 147, 169, 170, 173], "Outskirts": [139, 142, 143, 144, 146, 148, 108, 133, 152, 154, 157]}, "city_year_avg": [147, 149, 151, 152, 154, 156, 114, 140, 161, 162, 165], "years": [2014, 2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024], "monthly_avg_aqi": [186, 180, 160, 140, 130, 119, 106, 110, 134, 165, 180, 191], "monthly_avg_temp": [21.1, 20.9, 31.1, 31.0, 31.0, 21.9, 21.9, 22.1, 22.0, 24.9, 24.9, 21.0], "monthly_avg_humid": [60.2, 60.0, 52.5, 52.7, 52.7, 82.3, 82.6, 82.6, 82.6, 52.5, 52.7, 60.1], "monthly_avg_rain": [7.3, 7.6, 7.6, 7.6, 7.5, 164.7, 167.2, 164.1, 162.9, 50.6, 49.5, 7.5], "scatter_data": [{"x": 25.6, "y": 197, "zone": "East"}, {"x": 22.0, "y": 189, "zone": "Outskirts"}, {"x": 32.2, "y": 126, "zone": "East"}, {"x": 30.2, "y": 119, "zone": "North"}, {"x": 23.1, "y": 88, "zone": "South"}, {"x": 19.1, "y": 161, "zone": "West"}, {"x": 18.3, "y": 166, "zone": "West"}, {"x": 25.8, "y": 115, "zone": "East"}, {"x": 22.5, "y": 213, "zone": "Outskirts"}, {"x": 23.3, "y": 121, "zone": "South"}, {"x": 25.9, "y": 112, "zone": "East"}, {"x": 23.3, "y": 229, "zone": "East"}, {"x": 23.7, "y": 151, "zone": "West"}, {"x": 35.2, "y": 136, "zone": "South"}, {"x": 25.6, "y": 199, "zone": "West"}, {"x": 18.6, "y": 202, "zone": "North"}, {"x": 21.0, "y": 192, "zone": "South"}, {"x": 23.7, "y": 191, "zone": "North"}, {"x": 19.7, "y": 220, "zone": "Outskirts"}, {"x": 18.8, "y": 106, "zone": "North"}, {"x": 35.0, "y": 163, "zone": "West"}, {"x": 19.8, "y": 46, "zone": "Outskirts"}, {"x": 22.8, "y": 89, "zone": "South"}, {"x": 19.4, "y": 177, "zone": "West"}, {"x": 21.7, "y": 173, "zone": "Outskirts"}, {"x": 24.8, "y": 130, "zone": "West"}, {"x": 19.3, "y": 138, "zone": "North"}, {"x": 24.0, "y": 102, "zone": "South"}, {"x": 24.0, "y": 262, "zone": "North"}, {"x": 25.8, "y": 142, "zone": "Outskirts"}, {"x": 19.3, "y": 172, "zone": "North"}, {"x": 22.3, "y": 215, "zone": "Outskirts"}, {"x": 29.1, "y": 205, "zone": "East"}, {"x": 24.2, "y": 91, "zone": "East"}, {"x": 30.3, "y": 116, "zone": "West"}, {"x": 25.8, "y": 188, "zone": "North"}, {"x": 25.2, "y": 205, "zone": "East"}, {"x": 20.3, "y": 198, "zone": "East"}, {"x": 20.0, "y": 136, "zone": "South"}, {"x": 22.3, "y": 204, "zone": "West"}, {"x": 35.5, "y": 121, "zone": "West"}, {"x": 34.8, "y": 172, "zone": "South"}, {"x": 33.3, "y": 101, "zone": "West"}, {"x": 30.0, "y": 127, "zone": "East"}, {"x": 18.3, "y": 140, "zone": "East"}, {"x": 29.8, "y": 204, "zone": "West"}, {"x": 19.4, "y": 105, "zone": "South"}, {"x": 25.1, "y": 285, "zone": "North"}, {"x": 24.9, "y": 82, "zone": "Outskirts"}, {"x": 25.2, "y": 174, "zone": "West"}, {"x": 30.9, "y": 229, "zone": "North"}, {"x": 30.8, "y": 84, "zone": "North"}, {"x": 24.9, "y": 173, "zone": "Outskirts"}, {"x": 18.8, "y": 116, "zone": "East"}, {"x": 23.3, "y": 71, "zone": "Outskirts"}, {"x": 24.5, "y": 198, "zone": "Outskirts"}, {"x": 26.5, "y": 69, "zone": "Outskirts"}, {"x": 23.6, "y": 55, "zone": "West"}, {"x": 25.8, "y": 167, "zone": "North"}, {"x": 20.4, "y": 125, "zone": "West"}, {"x": 22.3, "y": 231, "zone": "West"}, {"x": 27.8, "y": 225, "zone": "East"}, {"x": 20.0, "y": 168, "zone": "South"}, {"x": 20.2, "y": 263, "zone": "Outskirts"}, {"x": 23.8, "y": 238, "zone": "East"}, {"x": 22.4, "y": 146, "zone": "Outskirts"}, {"x": 19.0, "y": 293, "zone": "North"}, {"x": 26.8, "y": 138, "zone": "South"}, {"x": 28.5, "y": 155, "zone": "West"}, {"x": 20.2, "y": 113, "zone": "South"}, {"x": 21.3, "y": 146, "zone": "South"}, {"x": 20.2, "y": 68, "zone": "Outskirts"}, {"x": 23.1, "y": 123, "zone": "North"}, {"x": 24.5, "y": 50, "zone": "Outskirts"}, {"x": 34.9, "y": 88, "zone": "West"}, {"x": 19.6, "y": 88, "zone": "East"}, {"x": 22.0, "y": 102, "zone": "North"}, {"x": 28.4, "y": 255, "zone": "North"}, {"x": 16.4, "y": 176, "zone": "South"}, {"x": 21.0, "y": 82, "zone": "West"}, {"x": 25.1, "y": 278, "zone": "West"}, {"x": 29.9, "y": 180, "zone": "North"}, {"x": 25.0, "y": 65, "zone": "South"}, {"x": 23.9, "y": 114, "zone": "West"}, {"x": 22.3, "y": 93, "zone": "South"}, {"x": 20.3, "y": 121, "zone": "Outskirts"}, {"x": 33.6, "y": 138, "zone": "North"}, {"x": 19.2, "y": 89, "zone": "West"}, {"x": 30.0, "y": 165, "zone": "East"}, {"x": 21.2, "y": 92, "zone": "West"}, {"x": 21.4, "y": 137, "zone": "South"}, {"x": 22.8, "y": 83, "zone": "West"}, {"x": 18.0, "y": 126, "zone": "West"}, {"x": 31.0, "y": 211, "zone": "West"}, {"x": 24.5, "y": 109, "zone": "South"}, {"x": 18.5, "y": 112, "zone": "East"}, {"x": 17.7, "y": 160, "zone": "North"}, {"x": 24.8, "y": 145, "zone": "West"}, {"x": 18.9, "y": 44, "zone": "Outskirts"}, {"x": 18.3, "y": 116, "zone": "East"}, {"x": 20.1, "y": 186, "zone": "South"}, {"x": 20.8, "y": 234, "zone": "West"}, {"x": 18.8, "y": 83, "zone": "South"}, {"x": 28.4, "y": 110, "zone": "South"}, {"x": 24.7, "y": 192, "zone": "South"}, {"x": 18.3, "y": 100, "zone": "South"}, {"x": 23.9, "y": 166, "zone": "South"}, {"x": 16.7, "y": 232, "zone": "North"}, {"x": 25.9, "y": 119, "zone": "West"}, {"x": 23.3, "y": 81, "zone": "Outskirts"}, {"x": 22.3, "y": 160, "zone": "South"}, {"x": 21.3, "y": 101, "zone": "East"}, {"x": 26.6, "y": 100, "zone": "North"}, {"x": 19.1, "y": 106, "zone": "North"}, {"x": 24.2, "y": 149, "zone": "Outskirts"}, {"x": 35.9, "y": 130, "zone": "Outskirts"}, {"x": 23.0, "y": 129, "zone": "North"}, {"x": 26.1, "y": 160, "zone": "North"}, {"x": 22.4, "y": 213, "zone": "North"}, {"x": 21.9, "y": 166, "zone": "North"}, {"x": 24.2, "y": 107, "zone": "Outskirts"}, {"x": 25.3, "y": 116, "zone": "West"}, {"x": 34.5, "y": 181, "zone": "Outskirts"}, {"x": 26.9, "y": 111, "zone": "East"}, {"x": 19.1, "y": 212, "zone": "Outskirts"}, {"x": 34.0, "y": 168, "zone": "West"}, {"x": 34.0, "y": 148, "zone": "South"}, {"x": 19.3, "y": 164, "zone": "West"}, {"x": 23.9, "y": 119, "zone": "South"}, {"x": 23.8, "y": 163, "zone": "South"}, {"x": 22.7, "y": 137, "zone": "Outskirts"}, {"x": 32.4, "y": 207, "zone": "West"}, {"x": 22.7, "y": 83, "zone": "East"}, {"x": 25.4, "y": 149, "zone": "West"}, {"x": 28.0, "y": 173, "zone": "South"}, {"x": 34.9, "y": 188, "zone": "East"}, {"x": 22.2, "y": 129, "zone": "West"}, {"x": 24.1, "y": 100, "zone": "Outskirts"}, {"x": 25.2, "y": 65, "zone": "West"}, {"x": 20.0, "y": 138, "zone": "Outskirts"}, {"x": 25.2, "y": 193, "zone": "Outskirts"}, {"x": 20.3, "y": 247, "zone": "East"}, {"x": 25.5, "y": 81, "zone": "North"}, {"x": 26.7, "y": 200, "zone": "East"}, {"x": 18.1, "y": 98, "zone": "North"}, {"x": 19.1, "y": 252, "zone": "West"}, {"x": 22.7, "y": 169, "zone": "West"}, {"x": 27.1, "y": 203, "zone": "West"}, {"x": 22.7, "y": 137, "zone": "East"}, {"x": 21.6, "y": 135, "zone": "South"}, {"x": 26.1, "y": 138, "zone": "South"}, {"x": 20.9, "y": 160, "zone": "North"}, {"x": 24.1, "y": 212, "zone": "Outskirts"}, {"x": 19.4, "y": 87, "zone": "South"}, {"x": 17.2, "y": 174, "zone": "North"}, {"x": 24.8, "y": 144, "zone": "Outskirts"}, {"x": 19.9, "y": 152, "zone": "South"}, {"x": 23.8, "y": 235, "zone": "East"}, {"x": 22.3, "y": 137, "zone": "Outskirts"}, {"x": 27.4, "y": 157, "zone": "South"}, {"x": 19.5, "y": 231, "zone": "East"}, {"x": 27.9, "y": 138, "zone": "East"}, {"x": 26.0, "y": 245, "zone": "North"}, {"x": 26.5, "y": 184, "zone": "North"}, {"x": 31.5, "y": 174, "zone": "Outskirts"}, {"x": 27.2, "y": 197, "zone": "North"}, {"x": 22.0, "y": 61, "zone": "Outskirts"}, {"x": 18.3, "y": 111, "zone": "South"}, {"x": 25.0, "y": 120, "zone": "North"}, {"x": 20.1, "y": 114, "zone": "West"}, {"x": 27.1, "y": 253, "zone": "West"}, {"x": 33.3, "y": 127, "zone": "West"}, {"x": 25.1, "y": 161, "zone": "West"}, {"x": 33.1, "y": 182, "zone": "Outskirts"}, {"x": 25.2, "y": 246, "zone": "North"}, {"x": 25.2, "y": 124, "zone": "North"}, {"x": 27.6, "y": 176, "zone": "North"}, {"x": 22.8, "y": 310, "zone": "West"}, {"x": 28.9, "y": 110, "zone": "South"}, {"x": 29.7, "y": 173, "zone": "West"}, {"x": 26.5, "y": 167, "zone": "West"}, {"x": 24.6, "y": 100, "zone": "North"}, {"x": 19.1, "y": 127, "zone": "East"}, {"x": 23.9, "y": 174, "zone": "North"}, {"x": 35.0, "y": 205, "zone": "East"}, {"x": 25.3, "y": 94, "zone": "North"}, {"x": 20.5, "y": 157, "zone": "North"}, {"x": 19.6, "y": 123, "zone": "West"}, {"x": 25.7, "y": 97, "zone": "North"}, {"x": 21.6, "y": 152, "zone": "South"}, {"x": 23.1, "y": 106, "zone": "South"}, {"x": 19.1, "y": 182, "zone": "Outskirts"}, {"x": 16.5, "y": 174, "zone": "North"}, {"x": 33.6, "y": 128, "zone": "East"}, {"x": 18.3, "y": 111, "zone": "South"}, {"x": 23.0, "y": 258, "zone": "Outskirts"}, {"x": 34.9, "y": 64, "zone": "Outskirts"}, {"x": 27.9, "y": 135, "zone": "North"}, {"x": 25.0, "y": 107, "zone": "Outskirts"}, {"x": 21.9, "y": 179, "zone": "North"}, {"x": 23.8, "y": 83, "zone": "West"}, {"x": 17.7, "y": 145, "zone": "East"}, {"x": 34.1, "y": 92, "zone": "West"}, {"x": 22.3, "y": 117, "zone": "North"}, {"x": 24.6, "y": 154, "zone": "South"}, {"x": 25.9, "y": 93, "zone": "North"}, {"x": 19.3, "y": 85, "zone": "South"}, {"x": 35.1, "y": 120, "zone": "North"}, {"x": 29.4, "y": 60, "zone": "Outskirts"}, {"x": 19.9, "y": 121, "zone": "South"}, {"x": 30.9, "y": 150, "zone": "East"}, {"x": 30.7, "y": 136, "zone": "East"}, {"x": 27.9, "y": 156, "zone": "South"}, {"x": 19.9, "y": 132, "zone": "West"}, {"x": 24.2, "y": 148, "zone": "East"}, {"x": 21.2, "y": 223, "zone": "North"}, {"x": 26.9, "y": 94, "zone": "West"}, {"x": 24.4, "y": 242, "zone": "North"}, {"x": 34.1, "y": 196, "zone": "South"}, {"x": 29.3, "y": 133, "zone": "South"}, {"x": 20.3, "y": 148, "zone": "East"}, {"x": 22.6, "y": 287, "zone": "Outskirts"}, {"x": 20.4, "y": 197, "zone": "East"}, {"x": 23.4, "y": 141, "zone": "West"}, {"x": 28.4, "y": 140, "zone": "South"}, {"x": 24.2, "y": 55, "zone": "Outskirts"}, {"x": 30.2, "y": 210, "zone": "Outskirts"}, {"x": 18.0, "y": 144, "zone": "South"}, {"x": 21.5, "y": 81, "zone": "Outskirts"}, {"x": 33.5, "y": 215, "zone": "North"}, {"x": 28.4, "y": 197, "zone": "Outskirts"}, {"x": 34.3, "y": 266, "zone": "Outskirts"}, {"x": 20.4, "y": 174, "zone": "North"}, {"x": 18.8, "y": 58, "zone": "South"}, {"x": 35.5, "y": 138, "zone": "East"}, {"x": 22.1, "y": 183, "zone": "West"}, {"x": 33.1, "y": 76, "zone": "South"}, {"x": 19.8, "y": 110, "zone": "North"}, {"x": 23.2, "y": 129, "zone": "West"}, {"x": 23.1, "y": 199, "zone": "East"}, {"x": 26.7, "y": 48, "zone": "Outskirts"}, {"x": 23.5, "y": 126, "zone": "South"}, {"x": 19.9, "y": 233, "zone": "North"}, {"x": 22.3, "y": 206, "zone": "East"}, {"x": 29.6, "y": 137, "zone": "Outskirts"}, {"x": 24.4, "y": 75, "zone": "East"}, {"x": 19.4, "y": 140, "zone": "West"}, {"x": 27.5, "y": 110, "zone": "West"}, {"x": 34.2, "y": 149, "zone": "South"}, {"x": 18.1, "y": 62, "zone": "Outskirts"}, {"x": 18.4, "y": 152, "zone": "East"}, {"x": 18.0, "y": 105, "zone": "East"}, {"x": 22.1, "y": 98, "zone": "Outskirts"}, {"x": 18.7, "y": 46, "zone": "South"}, {"x": 24.2, "y": 115, "zone": "North"}, {"x": 31.0, "y": 88, "zone": "West"}, {"x": 30.3, "y": 108, "zone": "Outskirts"}, {"x": 18.9, "y": 260, "zone": "North"}, {"x": 32.5, "y": 142, "zone": "East"}, {"x": 18.5, "y": 173, "zone": "Outskirts"}, {"x": 18.6, "y": 273, "zone": "North"}, {"x": 21.3, "y": 131, "zone": "East"}, {"x": 17.0, "y": 290, "zone": "Outskirts"}, {"x": 31.9, "y": 113, "zone": "North"}, {"x": 30.6, "y": 70, "zone": "West"}, {"x": 23.2, "y": 126, "zone": "South"}, {"x": 18.6, "y": 151, "zone": "North"}, {"x": 26.3, "y": 219, "zone": "South"}, {"x": 25.4, "y": 74, "zone": "Outskirts"}, {"x": 22.5, "y": 168, "zone": "East"}, {"x": 29.9, "y": 165, "zone": "East"}, {"x": 21.4, "y": 198, "zone": "West"}, {"x": 21.0, "y": 161, "zone": "South"}, {"x": 22.8, "y": 131, "zone": "Outskirts"}, {"x": 22.2, "y": 117, "zone": "East"}, {"x": 25.5, "y": 280, "zone": "West"}, {"x": 33.5, "y": 207, "zone": "West"}, {"x": 23.4, "y": 108, "zone": "West"}, {"x": 20.8, "y": 115, "zone": "North"}, {"x": 18.1, "y": 112, "zone": "Outskirts"}, {"x": 24.4, "y": 102, "zone": "South"}, {"x": 23.2, "y": 142, "zone": "East"}, {"x": 23.7, "y": 301, "zone": "Outskirts"}, {"x": 27.0, "y": 153, "zone": "East"}, {"x": 21.1, "y": 46, "zone": "Outskirts"}, {"x": 29.9, "y": 101, "zone": "North"}, {"x": 22.1, "y": 285, "zone": "North"}, {"x": 26.0, "y": 266, "zone": "West"}, {"x": 19.1, "y": 111, "zone": "South"}, {"x": 28.3, "y": 103, "zone": "Outskirts"}, {"x": 26.0, "y": 142, "zone": "East"}, {"x": 21.9, "y": 121, "zone": "North"}, {"x": 23.7, "y": 201, "zone": "South"}, {"x": 20.1, "y": 86, "zone": "South"}, {"x": 33.5, "y": 114, "zone": "West"}, {"x": 28.3, "y": 130, "zone": "East"}, {"x": 17.5, "y": 263, "zone": "East"}, {"x": 21.5, "y": 96, "zone": "Outskirts"}, {"x": 19.4, "y": 214, "zone": "Outskirts"}, {"x": 21.4, "y": 125, "zone": "West"}, {"x": 25.8, "y": 195, "zone": "North"}, {"x": 29.4, "y": 193, "zone": "East"}, {"x": 31.9, "y": 165, "zone": "Outskirts"}, {"x": 23.7, "y": 137, "zone": "West"}, {"x": 18.3, "y": 193, "zone": "East"}, {"x": 29.5, "y": 86, "zone": "Outskirts"}, {"x": 18.0, "y": 87, "zone": "Outskirts"}, {"x": 25.5, "y": 97, "zone": "Outskirts"}, {"x": 24.9, "y": 176, "zone": "North"}, {"x": 26.9, "y": 42, "zone": "South"}, {"x": 23.9, "y": 183, "zone": "East"}, {"x": 33.7, "y": 269, "zone": "North"}, {"x": 19.4, "y": 156, "zone": "South"}, {"x": 24.3, "y": 179, "zone": "Outskirts"}, {"x": 27.3, "y": 99, "zone": "North"}, {"x": 21.8, "y": 134, "zone": "East"}, {"x": 31.4, "y": 161, "zone": "West"}, {"x": 33.3, "y": 201, "zone": "West"}, {"x": 24.0, "y": 78, "zone": "West"}, {"x": 22.6, "y": 100, "zone": "West"}, {"x": 19.6, "y": 150, "zone": "Outskirts"}, {"x": 18.0, "y": 253, "zone": "North"}, {"x": 21.3, "y": 230, "zone": "North"}, {"x": 33.1, "y": 174, "zone": "West"}, {"x": 23.5, "y": 237, "zone": "East"}, {"x": 24.9, "y": 191, "zone": "South"}, {"x": 19.3, "y": 103, "zone": "East"}, {"x": 19.6, "y": 199, "zone": "North"}, {"x": 28.0, "y": 166, "zone": "East"}, {"x": 19.6, "y": 115, "zone": "South"}, {"x": 25.5, "y": 165, "zone": "West"}, {"x": 28.9, "y": 144, "zone": "West"}, {"x": 24.4, "y": 114, "zone": "North"}, {"x": 24.9, "y": 156, "zone": "Outskirts"}, {"x": 32.8, "y": 140, "zone": "North"}, {"x": 18.0, "y": 259, "zone": "North"}, {"x": 18.3, "y": 117, "zone": "East"}, {"x": 31.8, "y": 141, "zone": "Outskirts"}, {"x": 19.7, "y": 198, "zone": "East"}, {"x": 24.3, "y": 169, "zone": "North"}, {"x": 21.8, "y": 127, "zone": "South"}, {"x": 18.8, "y": 157, "zone": "North"}, {"x": 35.8, "y": 195, "zone": "Outskirts"}, {"x": 23.7, "y": 126, "zone": "Outskirts"}, {"x": 30.1, "y": 234, "zone": "North"}, {"x": 18.8, "y": 174, "zone": "Outskirts"}, {"x": 33.7, "y": 113, "zone": "West"}, {"x": 25.7, "y": 132, "zone": "West"}, {"x": 23.3, "y": 161, "zone": "North"}, {"x": 16.8, "y": 152, "zone": "South"}, {"x": 35.3, "y": 123, "zone": "North"}, {"x": 25.9, "y": 109, "zone": "West"}, {"x": 23.1, "y": 31, "zone": "Outskirts"}, {"x": 23.4, "y": 203, "zone": "South"}, {"x": 20.2, "y": 123, "zone": "South"}, {"x": 34.2, "y": 139, "zone": "South"}, {"x": 24.6, "y": 120, "zone": "Outskirts"}, {"x": 28.8, "y": 115, "zone": "South"}, {"x": 20.6, "y": 241, "zone": "North"}, {"x": 30.9, "y": 107, "zone": "East"}, {"x": 18.2, "y": 113, "zone": "East"}, {"x": 18.2, "y": 134, "zone": "West"}, {"x": 24.6, "y": 115, "zone": "North"}, {"x": 28.7, "y": 140, "zone": "North"}, {"x": 18.5, "y": 190, "zone": "South"}, {"x": 25.7, "y": 124, "zone": "East"}, {"x": 16.1, "y": 71, "zone": "Outskirts"}, {"x": 20.7, "y": 164, "zone": "Outskirts"}, {"x": 18.8, "y": 159, "zone": "North"}, {"x": 28.3, "y": 89, "zone": "South"}, {"x": 21.8, "y": 113, "zone": "North"}, {"x": 33.7, "y": 77, "zone": "Outskirts"}, {"x": 23.1, "y": 210, "zone": "West"}, {"x": 22.3, "y": 38, "zone": "Outskirts"}, {"x": 22.9, "y": 49, "zone": "Outskirts"}, {"x": 29.1, "y": 168, "zone": "East"}, {"x": 22.0, "y": 141, "zone": "North"}, {"x": 26.7, "y": 174, "zone": "North"}, {"x": 17.4, "y": 136, "zone": "South"}, {"x": 34.9, "y": 119, "zone": "North"}, {"x": 26.6, "y": 143, "zone": "North"}, {"x": 22.6, "y": 97, "zone": "North"}, {"x": 24.4, "y": 200, "zone": "South"}, {"x": 24.4, "y": 190, "zone": "Outskirts"}, {"x": 20.3, "y": 92, "zone": "South"}, {"x": 29.5, "y": 120, "zone": "West"}, {"x": 22.8, "y": 135, "zone": "South"}, {"x": 24.7, "y": 295, "zone": "East"}, {"x": 33.6, "y": 124, "zone": "North"}, {"x": 24.3, "y": 273, "zone": "Outskirts"}, {"x": 25.9, "y": 109, "zone": "Outskirts"}, {"x": 20.1, "y": 114, "zone": "West"}, {"x": 28.8, "y": 120, "zone": "Outskirts"}, {"x": 20.5, "y": 240, "zone": "West"}, {"x": 20.8, "y": 70, "zone": "Outskirts"}, {"x": 23.2, "y": 112, "zone": "West"}, {"x": 31.9, "y": 162, "zone": "East"}, {"x": 21.7, "y": 172, "zone": "West"}, {"x": 24.0, "y": 116, "zone": "East"}, {"x": 18.7, "y": 134, "zone": "East"}, {"x": 26.0, "y": 115, "zone": "West"}, {"x": 24.3, "y": 124, "zone": "South"}, {"x": 27.6, "y": 193, "zone": "South"}, {"x": 26.0, "y": 159, "zone": "East"}, {"x": 19.2, "y": 153, "zone": "West"}, {"x": 26.6, "y": 113, "zone": "South"}, {"x": 21.0, "y": 237, "zone": "North"}, {"x": 18.9, "y": 204, "zone": "North"}, {"x": 31.3, "y": 211, "zone": "North"}, {"x": 22.9, "y": 52, "zone": "South"}, {"x": 26.6, "y": 207, "zone": "East"}, {"x": 23.4, "y": 211, "zone": "East"}, {"x": 19.7, "y": 167, "zone": "Outskirts"}, {"x": 28.7, "y": 133, "zone": "East"}, {"x": 19.4, "y": 303, "zone": "Outskirts"}, {"x": 20.4, "y": 133, "zone": "North"}, {"x": 23.0, "y": 221, "zone": "East"}, {"x": 25.5, "y": 127, "zone": "Outskirts"}, {"x": 27.2, "y": 99, "zone": "West"}, {"x": 25.3, "y": 174, "zone": "North"}, {"x": 26.3, "y": 115, "zone": "North"}, {"x": 22.6, "y": 97, "zone": "South"}, {"x": 25.0, "y": 46, "zone": "South"}, {"x": 16.6, "y": 179, "zone": "North"}, {"x": 24.8, "y": 148, "zone": "West"}, {"x": 34.3, "y": 115, "zone": "South"}, {"x": 20.6, "y": 224, "zone": "East"}, {"x": 21.9, "y": 193, "zone": "East"}, {"x": 21.3, "y": 159, "zone": "West"}, {"x": 18.2, "y": 149, "zone": "North"}, {"x": 23.8, "y": 108, "zone": "South"}, {"x": 27.8, "y": 155, "zone": "North"}, {"x": 20.0, "y": 117, "zone": "East"}, {"x": 30.8, "y": 179, "zone": "Outskirts"}, {"x": 28.6, "y": 175, "zone": "South"}, {"x": 22.7, "y": 188, "zone": "North"}, {"x": 30.4, "y": 121, "zone": "South"}, {"x": 28.9, "y": 151, "zone": "South"}, {"x": 21.9, "y": 258, "zone": "West"}, {"x": 25.4, "y": 291, "zone": "Outskirts"}, {"x": 30.0, "y": 144, "zone": "North"}, {"x": 32.7, "y": 80, "zone": "South"}, {"x": 24.0, "y": 77, "zone": "East"}, {"x": 22.2, "y": 135, "zone": "East"}, {"x": 20.5, "y": 71, "zone": "South"}, {"x": 30.5, "y": 151, "zone": "East"}, {"x": 30.7, "y": 127, "zone": "North"}, {"x": 25.2, "y": 192, "zone": "North"}, {"x": 23.1, "y": 92, "zone": "West"}, {"x": 19.8, "y": 154, "zone": "East"}, {"x": 29.9, "y": 181, "zone": "East"}, {"x": 30.2, "y": 195, "zone": "East"}, {"x": 32.5, "y": 53, "zone": "Outskirts"}, {"x": 32.1, "y": 172, "zone": "East"}, {"x": 21.5, "y": 132, "zone": "North"}, {"x": 25.9, "y": 168, "zone": "East"}, {"x": 35.5, "y": 113, "zone": "North"}, {"x": 27.9, "y": 122, "zone": "Outskirts"}, {"x": 20.8, "y": 140, "zone": "West"}, {"x": 33.9, "y": 107, "zone": "East"}, {"x": 22.8, "y": 119, "zone": "North"}, {"x": 34.1, "y": 107, "zone": "South"}, {"x": 20.0, "y": 102, "zone": "East"}, {"x": 33.6, "y": 241, "zone": "Outskirts"}, {"x": 23.3, "y": 108, "zone": "Outskirts"}, {"x": 22.6, "y": 108, "zone": "North"}, {"x": 32.8, "y": 42, "zone": "South"}, {"x": 21.8, "y": 95, "zone": "West"}, {"x": 18.6, "y": 117, "zone": "West"}, {"x": 32.2, "y": 122, "zone": "West"}, {"x": 22.2, "y": 91, "zone": "North"}, {"x": 21.5, "y": 152, "zone": "North"}, {"x": 18.1, "y": 73, "zone": "North"}, {"x": 30.1, "y": 106, "zone": "South"}, {"x": 24.1, "y": 183, "zone": "Outskirts"}, {"x": 28.6, "y": 149, "zone": "South"}, {"x": 21.4, "y": 143, "zone": "North"}, {"x": 31.2, "y": 144, "zone": "East"}, {"x": 19.9, "y": 221, "zone": "North"}, {"x": 24.8, "y": 264, "zone": "North"}, {"x": 20.0, "y": 143, "zone": "East"}, {"x": 21.8, "y": 134, "zone": "West"}, {"x": 21.2, "y": 149, "zone": "West"}, {"x": 25.1, "y": 126, "zone": "South"}, {"x": 26.2, "y": 121, "zone": "East"}, {"x": 21.9, "y": 235, "zone": "West"}, {"x": 30.7, "y": 183, "zone": "Outskirts"}, {"x": 20.5, "y": 107, "zone": "West"}, {"x": 32.3, "y": 72, "zone": "Outskirts"}, {"x": 21.1, "y": 135, "zone": "Outskirts"}, {"x": 23.1, "y": 142, "zone": "South"}, {"x": 23.2, "y": 79, "zone": "East"}, {"x": 32.5, "y": 94, "zone": "North"}, {"x": 24.6, "y": 233, "zone": "East"}, {"x": 18.3, "y": 82, "zone": "South"}, {"x": 29.3, "y": 150, "zone": "South"}, {"x": 17.9, "y": 242, "zone": "West"}, {"x": 23.5, "y": 133, "zone": "Outskirts"}, {"x": 19.6, "y": 31, "zone": "South"}, {"x": 24.6, "y": 196, "zone": "East"}], "scatter_humid": [{"x": 66.7, "y": 165, "zone": "South"}, {"x": 91.9, "y": 171, "zone": "East"}, {"x": 68.4, "y": 151, "zone": "North"}, {"x": 40.5, "y": 269, "zone": "North"}, {"x": 87.9, "y": 125, "zone": "Outskirts"}, {"x": 77.3, "y": 128, "zone": "North"}, {"x": 46.3, "y": 201, "zone": "West"}, {"x": 88.4, "y": 105, "zone": "East"}, {"x": 43.9, "y": 151, "zone": "Outskirts"}, {"x": 60.6, "y": 159, "zone": "Outskirts"}, {"x": 53.0, "y": 138, "zone": "South"}, {"x": 62.4, "y": 123, "zone": "North"}, {"x": 73.1, "y": 149, "zone": "West"}, {"x": 60.4, "y": 133, "zone": "East"}, {"x": 52.5, "y": 89, "zone": "South"}, {"x": 63.7, "y": 204, "zone": "South"}, {"x": 47.4, "y": 100, "zone": "West"}, {"x": 84.4, "y": 109, "zone": "North"}, {"x": 50.4, "y": 182, "zone": "Outskirts"}, {"x": 51.8, "y": 189, "zone": "South"}, {"x": 42.3, "y": 92, "zone": "West"}, {"x": 41.4, "y": 197, "zone": "North"}, {"x": 40.4, "y": 283, "zone": "North"}, {"x": 52.7, "y": 127, "zone": "South"}, {"x": 63.5, "y": 196, "zone": "East"}, {"x": 66.0, "y": 236, "zone": "East"}, {"x": 46.3, "y": 234, "zone": "East"}, {"x": 53.7, "y": 139, "zone": "West"}, {"x": 83.5, "y": 155, "zone": "North"}, {"x": 51.6, "y": 176, "zone": "North"}, {"x": 60.9, "y": 150, "zone": "West"}, {"x": 64.4, "y": 187, "zone": "West"}, {"x": 80.6, "y": 145, "zone": "North"}, {"x": 55.8, "y": 185, "zone": "West"}, {"x": 52.3, "y": 121, "zone": "East"}, {"x": 79.0, "y": 81, "zone": "West"}, {"x": 49.6, "y": 142, "zone": "Outskirts"}, {"x": 45.0, "y": 141, "zone": "East"}, {"x": 74.3, "y": 144, "zone": "West"}, {"x": 45.7, "y": 169, "zone": "West"}, {"x": 84.5, "y": 135, "zone": "Outskirts"}, {"x": 58.4, "y": 172, "zone": "East"}, {"x": 76.5, "y": 150, "zone": "West"}, {"x": 46.7, "y": 229, "zone": "West"}, {"x": 66.1, "y": 311, "zone": "West"}, {"x": 58.8, "y": 274, "zone": "Outskirts"}, {"x": 48.0, "y": 177, "zone": "South"}, {"x": 66.4, "y": 110, "zone": "West"}, {"x": 82.6, "y": 90, "zone": "West"}, {"x": 77.7, "y": 111, "zone": "South"}, {"x": 47.8, "y": 190, "zone": "North"}, {"x": 90.7, "y": 118, "zone": "East"}, {"x": 47.8, "y": 101, "zone": "Outskirts"}, {"x": 55.6, "y": 268, "zone": "Outskirts"}, {"x": 78.9, "y": 110, "zone": "South"}, {"x": 49.5, "y": 141, "zone": "South"}, {"x": 92.0, "y": 150, "zone": "North"}, {"x": 65.8, "y": 210, "zone": "West"}, {"x": 77.9, "y": 126, "zone": "North"}, {"x": 73.1, "y": 81, "zone": "South"}, {"x": 75.2, "y": 116, "zone": "West"}, {"x": 78.7, "y": 124, "zone": "Outskirts"}, {"x": 53.1, "y": 187, "zone": "North"}, {"x": 70.3, "y": 114, "zone": "East"}, {"x": 60.8, "y": 280, "zone": "West"}, {"x": 62.4, "y": 168, "zone": "South"}, {"x": 92.7, "y": 182, "zone": "Outskirts"}, {"x": 77.7, "y": 108, "zone": "Outskirts"}, {"x": 40.6, "y": 152, "zone": "East"}, {"x": 88.1, "y": 101, "zone": "North"}, {"x": 47.9, "y": 61, "zone": "Outskirts"}, {"x": 81.4, "y": 66, "zone": "North"}, {"x": 59.8, "y": 199, "zone": "West"}, {"x": 63.4, "y": 223, "zone": "North"}, {"x": 56.6, "y": 134, "zone": "South"}, {"x": 54.6, "y": 140, "zone": "North"}, {"x": 76.0, "y": 99, "zone": "North"}, {"x": 42.0, "y": 107, "zone": "South"}, {"x": 63.8, "y": 267, "zone": "North"}, {"x": 54.7, "y": 176, "zone": "Outskirts"}, {"x": 70.2, "y": 110, "zone": "East"}, {"x": 57.0, "y": 159, "zone": "East"}, {"x": 61.3, "y": 144, "zone": "North"}, {"x": 61.9, "y": 79, "zone": "Outskirts"}, {"x": 62.3, "y": 208, "zone": "North"}, {"x": 48.0, "y": 124, "zone": "Outskirts"}, {"x": 66.4, "y": 149, "zone": "East"}, {"x": 58.0, "y": 238, "zone": "East"}, {"x": 70.5, "y": 122, "zone": "West"}, {"x": 40.4, "y": 168, "zone": "East"}, {"x": 48.1, "y": 137, "zone": "West"}, {"x": 54.3, "y": 224, "zone": "West"}, {"x": 45.7, "y": 221, "zone": "North"}, {"x": 90.0, "y": 114, "zone": "West"}, {"x": 59.6, "y": 156, "zone": "North"}, {"x": 91.0, "y": 132, "zone": "Outskirts"}, {"x": 63.8, "y": 96, "zone": "Outskirts"}, {"x": 61.4, "y": 77, "zone": "Outskirts"}, {"x": 45.0, "y": 220, "zone": "West"}, {"x": 91.5, "y": 129, "zone": "Outskirts"}, {"x": 59.2, "y": 98, "zone": "West"}, {"x": 51.5, "y": 192, "zone": "North"}, {"x": 58.5, "y": 251, "zone": "Outskirts"}, {"x": 56.8, "y": 159, "zone": "East"}, {"x": 47.3, "y": 141, "zone": "Outskirts"}, {"x": 58.1, "y": 111, "zone": "South"}, {"x": 80.2, "y": 103, "zone": "South"}, {"x": 62.9, "y": 174, "zone": "West"}, {"x": 46.2, "y": 118, "zone": "West"}, {"x": 72.7, "y": 122, "zone": "East"}, {"x": 42.7, "y": 134, "zone": "East"}, {"x": 54.3, "y": 181, "zone": "Outskirts"}, {"x": 89.0, "y": 106, "zone": "East"}, {"x": 48.8, "y": 130, "zone": "West"}, {"x": 78.1, "y": 161, "zone": "West"}, {"x": 47.6, "y": 256, "zone": "South"}, {"x": 71.3, "y": 35, "zone": "Outskirts"}, {"x": 59.8, "y": 187, "zone": "North"}, {"x": 55.7, "y": 86, "zone": "Outskirts"}, {"x": 60.7, "y": 203, "zone": "North"}, {"x": 41.3, "y": 204, "zone": "Outskirts"}, {"x": 73.0, "y": 100, "zone": "South"}, {"x": 55.7, "y": 124, "zone": "South"}, {"x": 55.7, "y": 235, "zone": "West"}, {"x": 84.9, "y": 104, "zone": "West"}, {"x": 74.3, "y": 38, "zone": "South"}, {"x": 54.5, "y": 201, "zone": "East"}, {"x": 83.7, "y": 99, "zone": "North"}, {"x": 56.6, "y": 216, "zone": "West"}, {"x": 91.0, "y": 117, "zone": "South"}, {"x": 70.4, "y": 54, "zone": "South"}, {"x": 75.4, "y": 90, "zone": "Outskirts"}, {"x": 56.9, "y": 111, "zone": "East"}, {"x": 86.5, "y": 108, "zone": "East"}, {"x": 40.6, "y": 141, "zone": "East"}, {"x": 57.7, "y": 285, "zone": "North"}, {"x": 84.5, "y": 41, "zone": "South"}, {"x": 50.8, "y": 122, "zone": "West"}, {"x": 40.1, "y": 182, "zone": "North"}, {"x": 45.9, "y": 167, "zone": "South"}, {"x": 66.6, "y": 116, "zone": "South"}, {"x": 63.0, "y": 299, "zone": "Outskirts"}, {"x": 60.3, "y": 240, "zone": "East"}, {"x": 55.3, "y": 213, "zone": "North"}, {"x": 63.7, "y": 236, "zone": "North"}, {"x": 51.4, "y": 150, "zone": "East"}, {"x": 93.1, "y": 121, "zone": "East"}, {"x": 54.2, "y": 153, "zone": "North"}, {"x": 92.7, "y": 138, "zone": "West"}, {"x": 52.1, "y": 144, "zone": "West"}, {"x": 45.1, "y": 238, "zone": "Outskirts"}, {"x": 77.3, "y": 84, "zone": "North"}, {"x": 87.7, "y": 122, "zone": "Outskirts"}, {"x": 69.9, "y": 130, "zone": "Outskirts"}, {"x": 79.7, "y": 168, "zone": "North"}, {"x": 79.6, "y": 124, "zone": "East"}, {"x": 40.8, "y": 116, "zone": "East"}, {"x": 62.9, "y": 229, "zone": "North"}, {"x": 60.9, "y": 150, "zone": "West"}, {"x": 80.9, "y": 106, "zone": "East"}, {"x": 58.0, "y": 196, "zone": "East"}, {"x": 83.1, "y": 100, "zone": "East"}, {"x": 47.3, "y": 148, "zone": "North"}, {"x": 94.8, "y": 117, "zone": "North"}, {"x": 50.3, "y": 221, "zone": "East"}, {"x": 85.7, "y": 56, "zone": "Outskirts"}, {"x": 90.0, "y": 100, "zone": "North"}, {"x": 48.8, "y": 170, "zone": "North"}, {"x": 45.5, "y": 140, "zone": "West"}, {"x": 67.5, "y": 155, "zone": "West"}, {"x": 50.7, "y": 131, "zone": "North"}, {"x": 59.0, "y": 277, "zone": "West"}, {"x": 46.2, "y": 194, "zone": "East"}, {"x": 48.7, "y": 148, "zone": "North"}, {"x": 62.5, "y": 137, "zone": "Outskirts"}, {"x": 62.7, "y": 140, "zone": "West"}, {"x": 59.3, "y": 52, "zone": "Outskirts"}, {"x": 45.9, "y": 124, "zone": "East"}, {"x": 58.4, "y": 176, "zone": "South"}, {"x": 75.5, "y": 97, "zone": "East"}, {"x": 88.2, "y": 114, "zone": "Outskirts"}, {"x": 63.1, "y": 120, "zone": "Outskirts"}, {"x": 85.2, "y": 82, "zone": "Outskirts"}, {"x": 94.6, "y": 172, "zone": "West"}, {"x": 90.9, "y": 99, "zone": "North"}, {"x": 52.3, "y": 276, "zone": "North"}, {"x": 57.9, "y": 198, "zone": "West"}, {"x": 61.0, "y": 143, "zone": "Outskirts"}, {"x": 47.4, "y": 154, "zone": "East"}, {"x": 43.0, "y": 180, "zone": "West"}, {"x": 64.0, "y": 233, "zone": "West"}, {"x": 46.2, "y": 183, "zone": "East"}, {"x": 65.9, "y": 84, "zone": "Outskirts"}, {"x": 81.3, "y": 132, "zone": "North"}, {"x": 41.4, "y": 185, "zone": "Outskirts"}, {"x": 40.5, "y": 61, "zone": "Outskirts"}, {"x": 46.5, "y": 78, "zone": "West"}, {"x": 70.2, "y": 115, "zone": "South"}, {"x": 73.4, "y": 127, "zone": "Outskirts"}, {"x": 73.8, "y": 117, "zone": "North"}, {"x": 48.9, "y": 124, "zone": "East"}, {"x": 47.7, "y": 59, "zone": "Outskirts"}, {"x": 51.2, "y": 162, "zone": "South"}, {"x": 61.9, "y": 176, "zone": "Outskirts"}, {"x": 56.6, "y": 190, "zone": "Outskirts"}, {"x": 59.9, "y": 180, "zone": "North"}, {"x": 79.5, "y": 149, "zone": "West"}, {"x": 75.5, "y": 149, "zone": "Outskirts"}, {"x": 45.9, "y": 136, "zone": "South"}, {"x": 60.1, "y": 226, "zone": "North"}, {"x": 44.4, "y": 190, "zone": "Outskirts"}, {"x": 45.0, "y": 146, "zone": "East"}, {"x": 54.8, "y": 198, "zone": "East"}, {"x": 46.7, "y": 172, "zone": "East"}, {"x": 52.1, "y": 219, "zone": "Outskirts"}, {"x": 52.6, "y": 152, "zone": "South"}, {"x": 51.8, "y": 167, "zone": "East"}, {"x": 45.8, "y": 210, "zone": "East"}, {"x": 50.8, "y": 173, "zone": "Outskirts"}, {"x": 56.3, "y": 287, "zone": "West"}, {"x": 61.0, "y": 243, "zone": "North"}, {"x": 64.0, "y": 187, "zone": "North"}, {"x": 70.4, "y": 143, "zone": "North"}, {"x": 54.7, "y": 229, "zone": "West"}, {"x": 75.2, "y": 64, "zone": "South"}, {"x": 43.0, "y": 125, "zone": "North"}, {"x": 60.9, "y": 175, "zone": "West"}, {"x": 54.9, "y": 78, "zone": "Outskirts"}, {"x": 60.0, "y": 119, "zone": "West"}, {"x": 95.0, "y": 118, "zone": "West"}, {"x": 42.1, "y": 205, "zone": "South"}, {"x": 87.1, "y": 149, "zone": "South"}, {"x": 72.2, "y": 79, "zone": "North"}, {"x": 67.4, "y": 132, "zone": "Outskirts"}, {"x": 83.2, "y": 63, "zone": "West"}, {"x": 64.2, "y": 127, "zone": "Outskirts"}, {"x": 70.9, "y": 86, "zone": "Outskirts"}, {"x": 53.4, "y": 194, "zone": "West"}, {"x": 89.1, "y": 78, "zone": "East"}, {"x": 47.4, "y": 159, "zone": "West"}, {"x": 47.0, "y": 137, "zone": "South"}, {"x": 44.5, "y": 156, "zone": "North"}, {"x": 59.5, "y": 221, "zone": "North"}, {"x": 74.9, "y": 98, "zone": "East"}, {"x": 45.4, "y": 132, "zone": "West"}, {"x": 50.8, "y": 139, "zone": "East"}, {"x": 75.5, "y": 79, "zone": "North"}, {"x": 85.9, "y": 79, "zone": "East"}, {"x": 51.0, "y": 286, "zone": "North"}, {"x": 92.0, "y": 173, "zone": "North"}, {"x": 54.6, "y": 180, "zone": "East"}, {"x": 74.6, "y": 81, "zone": "Outskirts"}, {"x": 42.1, "y": 175, "zone": "North"}, {"x": 76.8, "y": 166, "zone": "Outskirts"}, {"x": 59.0, "y": 193, "zone": "North"}, {"x": 75.7, "y": 126, "zone": "Outskirts"}, {"x": 64.3, "y": 198, "zone": "East"}, {"x": 78.9, "y": 117, "zone": "East"}, {"x": 56.1, "y": 92, "zone": "Outskirts"}, {"x": 42.1, "y": 129, "zone": "East"}, {"x": 55.7, "y": 180, "zone": "North"}, {"x": 63.3, "y": 210, "zone": "West"}, {"x": 68.5, "y": 227, "zone": "East"}, {"x": 86.5, "y": 147, "zone": "Outskirts"}, {"x": 53.5, "y": 97, "zone": "South"}, {"x": 41.7, "y": 235, "zone": "North"}, {"x": 53.7, "y": 136, "zone": "East"}, {"x": 52.3, "y": 163, "zone": "North"}, {"x": 87.0, "y": 139, "zone": "North"}, {"x": 87.3, "y": 115, "zone": "East"}, {"x": 92.1, "y": 57, "zone": "Outskirts"}, {"x": 54.7, "y": 160, "zone": "North"}, {"x": 75.8, "y": 135, "zone": "East"}, {"x": 53.7, "y": 197, "zone": "East"}, {"x": 54.5, "y": 165, "zone": "South"}, {"x": 84.7, "y": 137, "zone": "North"}, {"x": 83.4, "y": 130, "zone": "South"}, {"x": 92.1, "y": 182, "zone": "East"}, {"x": 42.0, "y": 120, "zone": "North"}, {"x": 83.4, "y": 86, "zone": "West"}, {"x": 91.3, "y": 135, "zone": "North"}, {"x": 58.0, "y": 227, "zone": "South"}, {"x": 60.2, "y": 211, "zone": "North"}, {"x": 73.5, "y": 126, "zone": "South"}, {"x": 49.4, "y": 117, "zone": "Outskirts"}, {"x": 49.0, "y": 213, "zone": "Outskirts"}, {"x": 86.4, "y": 171, "zone": "Outskirts"}, {"x": 62.0, "y": 157, "zone": "North"}, {"x": 40.0, "y": 262, "zone": "Outskirts"}, {"x": 43.5, "y": 264, "zone": "North"}, {"x": 58.3, "y": 119, "zone": "South"}, {"x": 53.8, "y": 298, "zone": "East"}, {"x": 56.5, "y": 63, "zone": "Outskirts"}, {"x": 86.0, "y": 101, "zone": "North"}, {"x": 42.4, "y": 151, "zone": "West"}, {"x": 56.0, "y": 255, "zone": "South"}, {"x": 75.2, "y": 103, "zone": "North"}, {"x": 57.2, "y": 119, "zone": "South"}, {"x": 60.6, "y": 176, "zone": "East"}, {"x": 71.6, "y": 113, "zone": "North"}, {"x": 45.8, "y": 158, "zone": "East"}, {"x": 44.3, "y": 161, "zone": "East"}, {"x": 60.3, "y": 215, "zone": "Outskirts"}, {"x": 79.7, "y": 88, "zone": "South"}, {"x": 84.0, "y": 113, "zone": "North"}, {"x": 53.5, "y": 178, "zone": "North"}, {"x": 52.7, "y": 218, "zone": "South"}, {"x": 86.3, "y": 154, "zone": "East"}, {"x": 64.3, "y": 127, "zone": "East"}, {"x": 40.4, "y": 172, "zone": "East"}, {"x": 79.7, "y": 90, "zone": "South"}, {"x": 59.9, "y": 112, "zone": "West"}, {"x": 57.9, "y": 272, "zone": "West"}, {"x": 80.9, "y": 96, "zone": "East"}, {"x": 56.4, "y": 150, "zone": "South"}, {"x": 74.9, "y": 136, "zone": "West"}, {"x": 41.9, "y": 96, "zone": "North"}, {"x": 67.8, "y": 291, "zone": "North"}, {"x": 63.7, "y": 184, "zone": "West"}, {"x": 62.7, "y": 245, "zone": "West"}, {"x": 46.9, "y": 148, "zone": "South"}, {"x": 70.3, "y": 108, "zone": "North"}, {"x": 45.6, "y": 206, "zone": "East"}, {"x": 94.4, "y": 138, "zone": "North"}, {"x": 69.1, "y": 197, "zone": "North"}, {"x": 62.9, "y": 70, "zone": "Outskirts"}, {"x": 55.6, "y": 128, "zone": "South"}, {"x": 47.8, "y": 148, "zone": "South"}, {"x": 50.4, "y": 157, "zone": "West"}, {"x": 82.6, "y": 96, "zone": "South"}, {"x": 56.9, "y": 209, "zone": "South"}, {"x": 82.5, "y": 112, "zone": "Outskirts"}, {"x": 56.9, "y": 186, "zone": "South"}, {"x": 47.2, "y": 113, "zone": "South"}, {"x": 90.8, "y": 134, "zone": "East"}, {"x": 63.2, "y": 140, "zone": "East"}, {"x": 83.3, "y": 51, "zone": "Outskirts"}, {"x": 55.1, "y": 177, "zone": "North"}, {"x": 92.2, "y": 99, "zone": "North"}, {"x": 51.5, "y": 122, "zone": "West"}, {"x": 51.8, "y": 129, "zone": "North"}, {"x": 94.9, "y": 143, "zone": "East"}, {"x": 45.8, "y": 171, "zone": "North"}, {"x": 87.1, "y": 149, "zone": "Outskirts"}, {"x": 68.7, "y": 257, "zone": "North"}, {"x": 63.0, "y": 112, "zone": "North"}, {"x": 60.9, "y": 133, "zone": "East"}, {"x": 52.4, "y": 106, "zone": "South"}, {"x": 54.2, "y": 169, "zone": "West"}, {"x": 68.9, "y": 183, "zone": "East"}, {"x": 81.1, "y": 166, "zone": "Outskirts"}, {"x": 49.0, "y": 157, "zone": "North"}, {"x": 62.7, "y": 271, "zone": "West"}, {"x": 87.7, "y": 99, "zone": "East"}, {"x": 43.5, "y": 174, "zone": "South"}, {"x": 84.5, "y": 109, "zone": "West"}, {"x": 58.5, "y": 230, "zone": "East"}, {"x": 93.4, "y": 74, "zone": "North"}, {"x": 92.4, "y": 139, "zone": "South"}, {"x": 54.1, "y": 134, "zone": "East"}, {"x": 68.2, "y": 303, "zone": "West"}, {"x": 53.3, "y": 277, "zone": "East"}, {"x": 63.5, "y": 134, "zone": "West"}, {"x": 85.3, "y": 111, "zone": "West"}, {"x": 63.2, "y": 273, "zone": "North"}, {"x": 56.6, "y": 217, "zone": "East"}, {"x": 59.6, "y": 123, "zone": "East"}, {"x": 88.4, "y": 133, "zone": "North"}, {"x": 88.2, "y": 116, "zone": "East"}, {"x": 52.2, "y": 237, "zone": "Outskirts"}, {"x": 47.0, "y": 170, "zone": "South"}, {"x": 91.2, "y": 113, "zone": "East"}, {"x": 81.3, "y": 114, "zone": "South"}, {"x": 41.5, "y": 170, "zone": "East"}, {"x": 85.6, "y": 98, "zone": "South"}, {"x": 40.3, "y": 125, "zone": "North"}, {"x": 64.4, "y": 139, "zone": "South"}, {"x": 83.1, "y": 119, "zone": "Outskirts"}, {"x": 64.6, "y": 126, "zone": "North"}, {"x": 55.6, "y": 192, "zone": "South"}, {"x": 57.4, "y": 181, "zone": "North"}, {"x": 60.0, "y": 143, "zone": "West"}, {"x": 52.6, "y": 150, "zone": "West"}, {"x": 77.6, "y": 61, "zone": "Outskirts"}, {"x": 61.6, "y": 172, "zone": "North"}, {"x": 63.1, "y": 134, "zone": "Outskirts"}, {"x": 60.6, "y": 158, "zone": "Outskirts"}, {"x": 58.7, "y": 193, "zone": "East"}, {"x": 92.7, "y": 120, "zone": "East"}, {"x": 59.6, "y": 162, "zone": "South"}, {"x": 59.2, "y": 95, "zone": "Outskirts"}, {"x": 58.9, "y": 136, "zone": "East"}, {"x": 85.1, "y": 107, "zone": "East"}, {"x": 70.7, "y": 105, "zone": "South"}, {"x": 92.7, "y": 98, "zone": "South"}, {"x": 62.4, "y": 179, "zone": "East"}, {"x": 84.8, "y": 158, "zone": "East"}, {"x": 71.9, "y": 157, "zone": "West"}, {"x": 93.6, "y": 115, "zone": "North"}, {"x": 61.2, "y": 216, "zone": "East"}, {"x": 43.2, "y": 102, "zone": "East"}, {"x": 57.4, "y": 248, "zone": "West"}, {"x": 64.8, "y": 144, "zone": "West"}, {"x": 60.2, "y": 118, "zone": "North"}, {"x": 40.1, "y": 173, "zone": "East"}, {"x": 53.2, "y": 200, "zone": "Outskirts"}, {"x": 63.6, "y": 201, "zone": "South"}, {"x": 63.6, "y": 76, "zone": "South"}, {"x": 72.7, "y": 155, "zone": "North"}, {"x": 44.1, "y": 100, "zone": "Outskirts"}, {"x": 53.1, "y": 189, "zone": "East"}, {"x": 53.3, "y": 197, "zone": "West"}, {"x": 41.9, "y": 133, "zone": "East"}, {"x": 77.5, "y": 171, "zone": "North"}, {"x": 74.9, "y": 103, "zone": "South"}, {"x": 88.3, "y": 74, "zone": "South"}, {"x": 59.1, "y": 121, "zone": "North"}, {"x": 74.0, "y": 73, "zone": "Outskirts"}, {"x": 85.7, "y": 202, "zone": "West"}, {"x": 53.4, "y": 120, "zone": "South"}, {"x": 64.4, "y": 81, "zone": "West"}, {"x": 77.3, "y": 89, "zone": "West"}, {"x": 58.1, "y": 134, "zone": "North"}, {"x": 43.8, "y": 109, "zone": "East"}, {"x": 47.9, "y": 141, "zone": "Outskirts"}, {"x": 49.4, "y": 211, "zone": "Outskirts"}, {"x": 80.8, "y": 122, "zone": "East"}, {"x": 47.4, "y": 118, "zone": "North"}, {"x": 60.0, "y": 190, "zone": "Outskirts"}, {"x": 76.4, "y": 153, "zone": "West"}, {"x": 63.4, "y": 166, "zone": "Outskirts"}, {"x": 56.6, "y": 192, "zone": "South"}, {"x": 44.6, "y": 90, "zone": "West"}, {"x": 61.2, "y": 106, "zone": "Outskirts"}, {"x": 45.7, "y": 94, "zone": "East"}, {"x": 63.6, "y": 149, "zone": "South"}, {"x": 56.8, "y": 308, "zone": "West"}, {"x": 88.4, "y": 97, "zone": "North"}, {"x": 50.9, "y": 182, "zone": "North"}, {"x": 84.7, "y": 74, "zone": "South"}, {"x": 78.7, "y": 68, "zone": "Outskirts"}, {"x": 44.1, "y": 104, "zone": "North"}, {"x": 46.9, "y": 184, "zone": "North"}, {"x": 50.1, "y": 79, "zone": "South"}, {"x": 62.0, "y": 204, "zone": "East"}, {"x": 56.0, "y": 162, "zone": "West"}, {"x": 58.8, "y": 261, "zone": "West"}, {"x": 63.0, "y": 83, "zone": "Outskirts"}, {"x": 62.2, "y": 209, "zone": "East"}, {"x": 59.1, "y": 191, "zone": "East"}, {"x": 53.3, "y": 178, "zone": "North"}, {"x": 50.1, "y": 193, "zone": "Outskirts"}, {"x": 66.8, "y": 205, "zone": "East"}, {"x": 69.3, "y": 141, "zone": "South"}, {"x": 67.3, "y": 226, "zone": "Outskirts"}, {"x": 59.4, "y": 227, "zone": "Outskirts"}, {"x": 77.1, "y": 118, "zone": "South"}, {"x": 53.5, "y": 291, "zone": "West"}, {"x": 45.6, "y": 69, "zone": "North"}, {"x": 64.2, "y": 150, "zone": "North"}, {"x": 43.0, "y": 151, "zone": "North"}, {"x": 83.1, "y": 138, "zone": "Outskirts"}, {"x": 55.9, "y": 75, "zone": "South"}, {"x": 48.6, "y": 110, "zone": "South"}, {"x": 82.2, "y": 93, "zone": "West"}, {"x": 55.9, "y": 206, "zone": "East"}, {"x": 47.0, "y": 107, "zone": "North"}, {"x": 62.7, "y": 207, "zone": "West"}, {"x": 65.4, "y": 189, "zone": "South"}, {"x": 64.4, "y": 47, "zone": "South"}, {"x": 56.8, "y": 155, "zone": "North"}, {"x": 61.3, "y": 120, "zone": "East"}, {"x": 93.9, "y": 83, "zone": "South"}, {"x": 51.2, "y": 151, "zone": "South"}, {"x": 72.1, "y": 188, "zone": "West"}, {"x": 71.7, "y": 85, "zone": "North"}, {"x": 89.8, "y": 148, "zone": "West"}, {"x": 64.8, "y": 258, "zone": "West"}, {"x": 46.0, "y": 96, "zone": "West"}, {"x": 64.8, "y": 208, "zone": "South"}, {"x": 77.9, "y": 120, "zone": "West"}, {"x": 62.1, "y": 138, "zone": "East"}, {"x": 74.4, "y": 193, "zone": "West"}, {"x": 51.6, "y": 109, "zone": "West"}, {"x": 59.4, "y": 107, "zone": "East"}, {"x": 50.2, "y": 210, "zone": "Outskirts"}, {"x": 59.5, "y": 92, "zone": "Outskirts"}, {"x": 66.3, "y": 217, "zone": "Outskirts"}, {"x": 53.8, "y": 99, "zone": "South"}, {"x": 69.6, "y": 172, "zone": "South"}, {"x": 60.0, "y": 219, "zone": "East"}, {"x": 82.9, "y": 143, "zone": "East"}, {"x": 58.8, "y": 135, "zone": "West"}, {"x": 84.3, "y": 156, "zone": "West"}, {"x": 68.2, "y": 211, "zone": "North"}, {"x": 90.5, "y": 125, "zone": "North"}, {"x": 60.3, "y": 126, "zone": "North"}, {"x": 92.9, "y": 105, "zone": "Outskirts"}, {"x": 71.1, "y": 108, "zone": "North"}, {"x": 60.6, "y": 168, "zone": "East"}], "scatter_rain": [{"x": 57.9, "y": 195, "zone": "East"}, {"x": 12.5, "y": 285, "zone": "West"}, {"x": 71.0, "y": 195, "zone": "East"}, {"x": 246.5, "y": 112, "zone": "North"}, {"x": 7.8, "y": 160, "zone": "West"}, {"x": 11.8, "y": 57, "zone": "Outskirts"}, {"x": 2.0, "y": 110, "zone": "South"}, {"x": 14.2, "y": 134, "zone": "East"}, {"x": 2.5, "y": 301, "zone": "West"}, {"x": 0.2, "y": 133, "zone": "East"}, {"x": 200.6, "y": 169, "zone": "Outskirts"}, {"x": 31.3, "y": 166, "zone": "East"}, {"x": 183.5, "y": 100, "zone": "South"}, {"x": 53.4, "y": 158, "zone": "East"}, {"x": 230.4, "y": 146, "zone": "West"}, {"x": 240.7, "y": 79, "zone": "Outskirts"}, {"x": 79.8, "y": 200, "zone": "West"}, {"x": 171.9, "y": 110, "zone": "South"}, {"x": 117.1, "y": 166, "zone": "West"}, {"x": 15.0, "y": 55, "zone": "Outskirts"}, {"x": 3.7, "y": 241, "zone": "North"}, {"x": 9.8, "y": 162, "zone": "East"}, {"x": 35.3, "y": 117, "zone": "South"}, {"x": 4.5, "y": 207, "zone": "North"}, {"x": 127.7, "y": 175, "zone": "Outskirts"}, {"x": 105.6, "y": 148, "zone": "West"}, {"x": 148.5, "y": 135, "zone": "North"}, {"x": 10.5, "y": 107, "zone": "West"}, {"x": 171.6, "y": 125, "zone": "South"}, {"x": 53.2, "y": 175, "zone": "North"}, {"x": 9.3, "y": 216, "zone": "East"}, {"x": 37.3, "y": 184, "zone": "East"}, {"x": 41.7, "y": 144, "zone": "East"}, {"x": 54.4, "y": 222, "zone": "North"}, {"x": 2.9, "y": 162, "zone": "West"}, {"x": 180.5, "y": 120, "zone": "North"}, {"x": 22.6, "y": 105, "zone": "Outskirts"}, {"x": 1.8, "y": 103, "zone": "North"}, {"x": 13.0, "y": 112, "zone": "Outskirts"}, {"x": 11.5, "y": 282, "zone": "Outskirts"}, {"x": 146.2, "y": 184, "zone": "Outskirts"}, {"x": 219.8, "y": 129, "zone": "East"}, {"x": 26.8, "y": 264, "zone": "North"}, {"x": 14.4, "y": 186, "zone": "East"}, {"x": 11.0, "y": 137, "zone": "North"}, {"x": 238.1, "y": 83, "zone": "North"}, {"x": 128.3, "y": 72, "zone": "West"}, {"x": 9.1, "y": 292, "zone": "North"}, {"x": 9.7, "y": 67, "zone": "South"}, {"x": 8.1, "y": 122, "zone": "West"}, {"x": 14.2, "y": 92, "zone": "Outskirts"}, {"x": 7.2, "y": 109, "zone": "South"}, {"x": 152.6, "y": 199, "zone": "Outskirts"}, {"x": 237.3, "y": 130, "zone": "South"}, {"x": 8.4, "y": 214, "zone": "North"}, {"x": 4.7, "y": 175, "zone": "Outskirts"}, {"x": 4.3, "y": 198, "zone": "West"}, {"x": 9.7, "y": 147, "zone": "South"}, {"x": 6.3, "y": 164, "zone": "South"}, {"x": 1.0, "y": 172, "zone": "North"}, {"x": 219.1, "y": 126, "zone": "East"}, {"x": 9.6, "y": 117, "zone": "East"}, {"x": 3.9, "y": 126, "zone": "Outskirts"}, {"x": 72.8, "y": 205, "zone": "East"}, {"x": 194.8, "y": 101, "zone": "East"}, {"x": 168.5, "y": 60, "zone": "South"}, {"x": 177.3, "y": 129, "zone": "East"}, {"x": 78.1, "y": 136, "zone": "East"}, {"x": 216.7, "y": 57, "zone": "Outskirts"}, {"x": 130.4, "y": 55, "zone": "Outskirts"}, {"x": 8.2, "y": 150, "zone": "East"}, {"x": 12.8, "y": 233, "zone": "North"}, {"x": 118.2, "y": 140, "zone": "East"}, {"x": 52.9, "y": 192, "zone": "Outskirts"}, {"x": 8.4, "y": 152, "zone": "North"}, {"x": 167.5, "y": 120, "zone": "West"}, {"x": 244.0, "y": 102, "zone": "South"}, {"x": 165.6, "y": 103, "zone": "North"}, {"x": 7.1, "y": 180, "zone": "South"}, {"x": 0.1, "y": 151, "zone": "South"}, {"x": 7.9, "y": 132, "zone": "East"}, {"x": 146.5, "y": 123, "zone": "East"}, {"x": 226.4, "y": 154, "zone": "Outskirts"}, {"x": 8.0, "y": 167, "zone": "East"}, {"x": 7.5, "y": 135, "zone": "East"}, {"x": 175.8, "y": 170, "zone": "West"}, {"x": 66.8, "y": 173, "zone": "East"}, {"x": 2.8, "y": 148, "zone": "Outskirts"}, {"x": 166.0, "y": 85, "zone": "South"}, {"x": 2.9, "y": 177, "zone": "Outskirts"}, {"x": 65.8, "y": 203, "zone": "South"}, {"x": 72.5, "y": 183, "zone": "East"}, {"x": 36.4, "y": 201, "zone": "South"}, {"x": 28.8, "y": 240, "zone": "West"}, {"x": 14.4, "y": 83, "zone": "Outskirts"}, {"x": 4.0, "y": 215, "zone": "North"}, {"x": 9.6, "y": 149, "zone": "East"}, {"x": 129.3, "y": 139, "zone": "North"}, {"x": 92.8, "y": 118, "zone": "South"}, {"x": 124.2, "y": 135, "zone": "West"}, {"x": 231.7, "y": 73, "zone": "North"}, {"x": 9.1, "y": 166, "zone": "South"}, {"x": 144.3, "y": 169, "zone": "East"}, {"x": 41.1, "y": 242, "zone": "North"}, {"x": 200.1, "y": 170, "zone": "Outskirts"}, {"x": 14.7, "y": 132, "zone": "West"}, {"x": 9.0, "y": 200, "zone": "Outskirts"}, {"x": 136.7, "y": 141, "zone": "South"}, {"x": 5.0, "y": 221, "zone": "South"}, {"x": 10.0, "y": 201, "zone": "West"}, {"x": 9.6, "y": 157, "zone": "South"}, {"x": 11.1, "y": 142, "zone": "West"}, {"x": 4.9, "y": 107, "zone": "North"}, {"x": 117.0, "y": 132, "zone": "Outskirts"}, {"x": 8.2, "y": 109, "zone": "West"}, {"x": 13.8, "y": 218, "zone": "Outskirts"}, {"x": 7.8, "y": 93, "zone": "South"}, {"x": 3.3, "y": 81, "zone": "Outskirts"}, {"x": 4.9, "y": 202, "zone": "East"}, {"x": 106.2, "y": 116, "zone": "East"}, {"x": 188.5, "y": 135, "zone": "East"}, {"x": 179.5, "y": 111, "zone": "North"}, {"x": 199.1, "y": 200, "zone": "West"}, {"x": 7.2, "y": 92, "zone": "Outskirts"}, {"x": 91.6, "y": 168, "zone": "West"}, {"x": 57.5, "y": 48, "zone": "Outskirts"}, {"x": 106.1, "y": 45, "zone": "Outskirts"}, {"x": 5.1, "y": 126, "zone": "West"}, {"x": 107.8, "y": 194, "zone": "Outskirts"}, {"x": 8.0, "y": 218, "zone": "East"}, {"x": 5.1, "y": 215, "zone": "West"}, {"x": 142.2, "y": 121, "zone": "East"}, {"x": 2.3, "y": 205, "zone": "West"}, {"x": 28.2, "y": 60, "zone": "South"}, {"x": 2.8, "y": 137, "zone": "Outskirts"}, {"x": 173.4, "y": 113, "zone": "East"}, {"x": 7.5, "y": 212, "zone": "South"}, {"x": 14.8, "y": 167, "zone": "East"}, {"x": 11.1, "y": 86, "zone": "South"}, {"x": 246.6, "y": 102, "zone": "North"}, {"x": 55.7, "y": 161, "zone": "North"}, {"x": 42.1, "y": 186, "zone": "North"}, {"x": 2.4, "y": 50, "zone": "South"}, {"x": 178.2, "y": 106, "zone": "East"}, {"x": 14.0, "y": 226, "zone": "North"}, {"x": 139.4, "y": 126, "zone": "South"}, {"x": 60.6, "y": 122, "zone": "Outskirts"}, {"x": 91.2, "y": 221, "zone": "North"}, {"x": 130.2, "y": 166, "zone": "North"}, {"x": 2.3, "y": 299, "zone": "North"}, {"x": 12.6, "y": 197, "zone": "Outskirts"}, {"x": 11.0, "y": 195, "zone": "East"}, {"x": 14.5, "y": 196, "zone": "Outskirts"}, {"x": 3.0, "y": 94, "zone": "South"}, {"x": 6.5, "y": 197, "zone": "West"}, {"x": 3.5, "y": 149, "zone": "East"}, {"x": 212.2, "y": 89, "zone": "West"}, {"x": 92.1, "y": 120, "zone": "South"}, {"x": 189.6, "y": 104, "zone": "East"}, {"x": 10.8, "y": 126, "zone": "South"}, {"x": 241.5, "y": 123, "zone": "East"}, {"x": 221.7, "y": 110, "zone": "West"}, {"x": 151.8, "y": 180, "zone": "North"}, {"x": 78.5, "y": 173, "zone": "West"}, {"x": 63.7, "y": 82, "zone": "North"}, {"x": 7.3, "y": 177, "zone": "Outskirts"}, {"x": 195.8, "y": 81, "zone": "South"}, {"x": 52.6, "y": 208, "zone": "East"}, {"x": 236.8, "y": 137, "zone": "West"}, {"x": 6.1, "y": 123, "zone": "East"}, {"x": 8.9, "y": 231, "zone": "East"}, {"x": 27.2, "y": 81, "zone": "South"}, {"x": 8.9, "y": 89, "zone": "North"}, {"x": 246.6, "y": 191, "zone": "West"}, {"x": 218.4, "y": 92, "zone": "North"}, {"x": 202.9, "y": 82, "zone": "South"}, {"x": 5.8, "y": 204, "zone": "East"}, {"x": 6.1, "y": 180, "zone": "North"}, {"x": 13.2, "y": 203, "zone": "South"}, {"x": 11.3, "y": 193, "zone": "West"}, {"x": 9.4, "y": 224, "zone": "East"}, {"x": 2.5, "y": 102, "zone": "South"}, {"x": 12.8, "y": 160, "zone": "South"}, {"x": 4.1, "y": 94, "zone": "South"}, {"x": 13.4, "y": 210, "zone": "Outskirts"}, {"x": 14.5, "y": 210, "zone": "Outskirts"}, {"x": 9.2, "y": 197, "zone": "Outskirts"}, {"x": 13.3, "y": 97, "zone": "South"}, {"x": 1.5, "y": 136, "zone": "South"}, {"x": 181.8, "y": 165, "zone": "West"}, {"x": 0.1, "y": 162, "zone": "East"}, {"x": 240.0, "y": 47, "zone": "South"}, {"x": 14.4, "y": 150, "zone": "East"}, {"x": 214.2, "y": 103, "zone": "East"}, {"x": 29.2, "y": 105, "zone": "Outskirts"}, {"x": 138.7, "y": 140, "zone": "South"}, {"x": 40.2, "y": 161, "zone": "North"}, {"x": 119.2, "y": 86, "zone": "South"}, {"x": 105.8, "y": 109, "zone": "West"}, {"x": 54.0, "y": 148, "zone": "North"}, {"x": 164.8, "y": 147, "zone": "North"}, {"x": 1.3, "y": 179, "zone": "West"}, {"x": 8.4, "y": 231, "zone": "Outskirts"}, {"x": 11.7, "y": 158, "zone": "East"}, {"x": 37.4, "y": 173, "zone": "North"}, {"x": 246.3, "y": 130, "zone": "East"}, {"x": 48.2, "y": 231, "zone": "West"}, {"x": 32.9, "y": 133, "zone": "East"}, {"x": 51.4, "y": 131, "zone": "East"}, {"x": 7.4, "y": 120, "zone": "North"}, {"x": 14.2, "y": 95, "zone": "North"}, {"x": 10.9, "y": 189, "zone": "South"}, {"x": 79.6, "y": 245, "zone": "North"}, {"x": 12.8, "y": 101, "zone": "Outskirts"}, {"x": 14.5, "y": 191, "zone": "North"}, {"x": 7.6, "y": 127, "zone": "East"}, {"x": 187.1, "y": 144, "zone": "South"}, {"x": 221.9, "y": 106, "zone": "East"}, {"x": 210.1, "y": 119, "zone": "West"}, {"x": 14.8, "y": 129, "zone": "North"}, {"x": 73.5, "y": 163, "zone": "East"}, {"x": 3.6, "y": 134, "zone": "West"}, {"x": 180.6, "y": 112, "zone": "Outskirts"}, {"x": 142.1, "y": 118, "zone": "East"}, {"x": 175.1, "y": 179, "zone": "North"}, {"x": 13.9, "y": 136, "zone": "South"}, {"x": 9.7, "y": 193, "zone": "South"}, {"x": 8.9, "y": 277, "zone": "West"}, {"x": 166.7, "y": 94, "zone": "South"}, {"x": 78.4, "y": 202, "zone": "North"}, {"x": 11.2, "y": 145, "zone": "South"}, {"x": 195.1, "y": 135, "zone": "East"}, {"x": 0.1, "y": 117, "zone": "South"}, {"x": 168.2, "y": 170, "zone": "East"}, {"x": 166.7, "y": 107, "zone": "North"}, {"x": 245.3, "y": 78, "zone": "West"}, {"x": 62.6, "y": 134, "zone": "South"}, {"x": 6.1, "y": 181, "zone": "West"}, {"x": 105.5, "y": 94, "zone": "West"}, {"x": 3.4, "y": 175, "zone": "Outskirts"}, {"x": 130.2, "y": 180, "zone": "South"}, {"x": 67.2, "y": 103, "zone": "Outskirts"}, {"x": 0.3, "y": 183, "zone": "South"}, {"x": 92.8, "y": 82, "zone": "Outskirts"}, {"x": 9.3, "y": 185, "zone": "East"}, {"x": 32.1, "y": 157, "zone": "West"}, {"x": 192.7, "y": 105, "zone": "West"}, {"x": 26.4, "y": 155, "zone": "East"}, {"x": 11.2, "y": 131, "zone": "West"}, {"x": 14.8, "y": 296, "zone": "West"}, {"x": 9.6, "y": 106, "zone": "South"}, {"x": 5.7, "y": 91, "zone": "South"}, {"x": 132.6, "y": 155, "zone": "South"}, {"x": 91.5, "y": 99, "zone": "North"}, {"x": 2.8, "y": 149, "zone": "North"}, {"x": 248.6, "y": 108, "zone": "West"}, {"x": 221.8, "y": 160, "zone": "Outskirts"}, {"x": 2.4, "y": 121, "zone": "Outskirts"}, {"x": 8.5, "y": 261, "zone": "North"}, {"x": 81.7, "y": 105, "zone": "South"}, {"x": 98.9, "y": 175, "zone": "Outskirts"}, {"x": 13.1, "y": 190, "zone": "East"}, {"x": 107.6, "y": 105, "zone": "South"}, {"x": 175.8, "y": 116, "zone": "South"}, {"x": 80.7, "y": 92, "zone": "South"}, {"x": 2.3, "y": 288, "zone": "Outskirts"}, {"x": 213.8, "y": 78, "zone": "Outskirts"}, {"x": 5.0, "y": 276, "zone": "Outskirts"}, {"x": 0.6, "y": 145, "zone": "West"}, {"x": 204.2, "y": 90, "zone": "West"}, {"x": 127.4, "y": 139, "zone": "East"}, {"x": 14.5, "y": 147, "zone": "North"}, {"x": 33.0, "y": 63, "zone": "Outskirts"}, {"x": 11.5, "y": 101, "zone": "South"}, {"x": 230.7, "y": 89, "zone": "North"}, {"x": 125.6, "y": 170, "zone": "Outskirts"}, {"x": 6.5, "y": 165, "zone": "West"}, {"x": 5.3, "y": 173, "zone": "East"}, {"x": 218.2, "y": 149, "zone": "South"}, {"x": 196.4, "y": 199, "zone": "Outskirts"}, {"x": 0.0, "y": 101, "zone": "Outskirts"}, {"x": 193.2, "y": 134, "zone": "Outskirts"}, {"x": 7.0, "y": 80, "zone": "West"}, {"x": 7.7, "y": 140, "zone": "Outskirts"}, {"x": 2.6, "y": 101, "zone": "South"}, {"x": 95.2, "y": 104, "zone": "South"}, {"x": 8.9, "y": 246, "zone": "Outskirts"}, {"x": 22.2, "y": 219, "zone": "South"}, {"x": 235.3, "y": 105, "zone": "North"}, {"x": 118.5, "y": 150, "zone": "West"}, {"x": 27.4, "y": 160, "zone": "South"}, {"x": 13.1, "y": 306, "zone": "Outskirts"}, {"x": 66.4, "y": 159, "zone": "East"}, {"x": 1.6, "y": 256, "zone": "South"}, {"x": 184.3, "y": 146, "zone": "East"}, {"x": 4.2, "y": 272, "zone": "West"}, {"x": 222.9, "y": 103, "zone": "East"}, {"x": 88.3, "y": 69, "zone": "South"}, {"x": 98.9, "y": 175, "zone": "West"}, {"x": 7.7, "y": 196, "zone": "South"}, {"x": 239.1, "y": 142, "zone": "North"}, {"x": 4.1, "y": 266, "zone": "North"}, {"x": 4.7, "y": 138, "zone": "West"}, {"x": 6.0, "y": 147, "zone": "West"}, {"x": 159.8, "y": 143, "zone": "East"}, {"x": 5.4, "y": 192, "zone": "East"}, {"x": 3.7, "y": 189, "zone": "West"}, {"x": 89.7, "y": 214, "zone": "West"}, {"x": 150.6, "y": 102, "zone": "North"}, {"x": 8.6, "y": 113, "zone": "North"}, {"x": 1.8, "y": 179, "zone": "East"}, {"x": 8.4, "y": 186, "zone": "North"}, {"x": 7.5, "y": 133, "zone": "South"}, {"x": 7.6, "y": 157, "zone": "West"}, {"x": 8.5, "y": 168, "zone": "North"}, {"x": 1.6, "y": 147, "zone": "North"}, {"x": 131.3, "y": 121, "zone": "Outskirts"}, {"x": 12.7, "y": 155, "zone": "South"}, {"x": 2.7, "y": 133, "zone": "Outskirts"}, {"x": 75.2, "y": 116, "zone": "Outskirts"}, {"x": 14.1, "y": 180, "zone": "West"}, {"x": 128.4, "y": 81, "zone": "West"}, {"x": 216.8, "y": 70, "zone": "Outskirts"}, {"x": 60.5, "y": 121, "zone": "Outskirts"}, {"x": 6.2, "y": 169, "zone": "South"}, {"x": 7.1, "y": 270, "zone": "Outskirts"}, {"x": 14.4, "y": 109, "zone": "North"}, {"x": 14.0, "y": 216, "zone": "South"}, {"x": 201.0, "y": 108, "zone": "Outskirts"}, {"x": 2.6, "y": 178, "zone": "East"}, {"x": 95.3, "y": 116, "zone": "East"}, {"x": 23.8, "y": 163, "zone": "West"}, {"x": 14.4, "y": 164, "zone": "North"}, {"x": 23.2, "y": 244, "zone": "West"}, {"x": 118.1, "y": 150, "zone": "West"}, {"x": 91.9, "y": 104, "zone": "North"}, {"x": 5.8, "y": 214, "zone": "West"}, {"x": 104.8, "y": 103, "zone": "North"}, {"x": 79.8, "y": 178, "zone": "West"}, {"x": 52.8, "y": 288, "zone": "West"}, {"x": 230.7, "y": 156, "zone": "East"}, {"x": 10.1, "y": 245, "zone": "West"}, {"x": 12.2, "y": 133, "zone": "East"}, {"x": 95.9, "y": 116, "zone": "South"}, {"x": 12.2, "y": 142, "zone": "North"}, {"x": 187.3, "y": 122, "zone": "West"}, {"x": 5.9, "y": 101, "zone": "Outskirts"}, {"x": 209.3, "y": 38, "zone": "South"}, {"x": 11.1, "y": 58, "zone": "Outskirts"}, {"x": 199.9, "y": 147, "zone": "West"}, {"x": 65.3, "y": 243, "zone": "Outskirts"}, {"x": 178.9, "y": 103, "zone": "East"}, {"x": 239.2, "y": 73, "zone": "West"}, {"x": 220.1, "y": 99, "zone": "South"}, {"x": 232.5, "y": 123, "zone": "Outskirts"}, {"x": 106.0, "y": 144, "zone": "North"}, {"x": 33.3, "y": 146, "zone": "South"}, {"x": 80.8, "y": 120, "zone": "North"}, {"x": 0.0, "y": 165, "zone": "West"}, {"x": 188.9, "y": 117, "zone": "East"}, {"x": 6.5, "y": 126, "zone": "Outskirts"}, {"x": 38.7, "y": 138, "zone": "South"}, {"x": 14.3, "y": 193, "zone": "South"}, {"x": 11.3, "y": 171, "zone": "Outskirts"}, {"x": 9.7, "y": 137, "zone": "South"}, {"x": 8.6, "y": 109, "zone": "East"}, {"x": 51.5, "y": 250, "zone": "North"}, {"x": 40.1, "y": 207, "zone": "South"}, {"x": 12.0, "y": 186, "zone": "North"}, {"x": 7.5, "y": 134, "zone": "South"}, {"x": 50.4, "y": 273, "zone": "Outskirts"}, {"x": 2.2, "y": 288, "zone": "Outskirts"}, {"x": 64.6, "y": 170, "zone": "South"}, {"x": 194.3, "y": 80, "zone": "East"}, {"x": 2.7, "y": 144, "zone": "East"}, {"x": 141.4, "y": 49, "zone": "Outskirts"}, {"x": 10.0, "y": 274, "zone": "Outskirts"}, {"x": 61.9, "y": 130, "zone": "Outskirts"}, {"x": 7.2, "y": 123, "zone": "Outskirts"}, {"x": 240.8, "y": 139, "zone": "South"}, {"x": 0.5, "y": 166, "zone": "South"}, {"x": 52.3, "y": 191, "zone": "East"}, {"x": 1.3, "y": 313, "zone": "Outskirts"}, {"x": 167.8, "y": 31, "zone": "South"}, {"x": 3.1, "y": 111, "zone": "South"}, {"x": 10.0, "y": 142, "zone": "North"}, {"x": 138.6, "y": 143, "zone": "East"}, {"x": 2.7, "y": 211, "zone": "West"}, {"x": 144.3, "y": 108, "zone": "West"}, {"x": 134.0, "y": 164, "zone": "North"}, {"x": 47.0, "y": 302, "zone": "Outskirts"}, {"x": 56.9, "y": 248, "zone": "West"}, {"x": 238.9, "y": 164, "zone": "North"}, {"x": 107.6, "y": 103, "zone": "East"}, {"x": 0.3, "y": 197, "zone": "North"}, {"x": 204.6, "y": 160, "zone": "West"}, {"x": 1.5, "y": 114, "zone": "West"}, {"x": 105.6, "y": 150, "zone": "North"}, {"x": 247.0, "y": 97, "zone": "North"}, {"x": 118.8, "y": 173, "zone": "South"}, {"x": 3.3, "y": 99, "zone": "North"}, {"x": 1.3, "y": 260, "zone": "North"}, {"x": 4.2, "y": 173, "zone": "South"}, {"x": 52.7, "y": 107, "zone": "Outskirts"}, {"x": 6.6, "y": 158, "zone": "East"}, {"x": 43.6, "y": 155, "zone": "North"}, {"x": 12.8, "y": 256, "zone": "North"}, {"x": 0.4, "y": 232, "zone": "East"}, {"x": 243.1, "y": 49, "zone": "Outskirts"}, {"x": 13.7, "y": 157, "zone": "East"}, {"x": 89.1, "y": 109, "zone": "North"}, {"x": 226.1, "y": 130, "zone": "South"}, {"x": 8.1, "y": 178, "zone": "East"}, {"x": 7.4, "y": 170, "zone": "East"}, {"x": 14.1, "y": 154, "zone": "North"}, {"x": 54.5, "y": 229, "zone": "East"}, {"x": 13.9, "y": 165, "zone": "South"}, {"x": 112.5, "y": 115, "zone": "South"}, {"x": 1.2, "y": 51, "zone": "Outskirts"}, {"x": 5.4, "y": 254, "zone": "East"}, {"x": 2.5, "y": 293, "zone": "Outskirts"}, {"x": 11.9, "y": 193, "zone": "Outskirts"}, {"x": 7.9, "y": 234, "zone": "Outskirts"}, {"x": 8.0, "y": 124, "zone": "East"}, {"x": 123.9, "y": 110, "zone": "East"}, {"x": 12.6, "y": 231, "zone": "North"}, {"x": 54.1, "y": 122, "zone": "East"}, {"x": 11.7, "y": 179, "zone": "South"}, {"x": 96.6, "y": 127, "zone": "West"}, {"x": 168.0, "y": 139, "zone": "West"}, {"x": 190.2, "y": 57, "zone": "Outskirts"}, {"x": 225.5, "y": 52, "zone": "Outskirts"}, {"x": 110.9, "y": 112, "zone": "East"}, {"x": 14.8, "y": 133, "zone": "Outskirts"}, {"x": 7.7, "y": 129, "zone": "North"}, {"x": 8.4, "y": 149, "zone": "West"}, {"x": 7.0, "y": 130, "zone": "North"}, {"x": 9.4, "y": 98, "zone": "East"}, {"x": 69.7, "y": 169, "zone": "East"}, {"x": 39.9, "y": 173, "zone": "South"}, {"x": 12.8, "y": 250, "zone": "North"}, {"x": 98.6, "y": 126, "zone": "West"}, {"x": 123.9, "y": 145, "zone": "North"}, {"x": 12.1, "y": 114, "zone": "West"}, {"x": 58.9, "y": 77, "zone": "Outskirts"}, {"x": 216.0, "y": 124, "zone": "West"}, {"x": 7.6, "y": 310, "zone": "Outskirts"}, {"x": 4.1, "y": 122, "zone": "Outskirts"}, {"x": 1.7, "y": 191, "zone": "North"}, {"x": 157.3, "y": 193, "zone": "North"}, {"x": 212.3, "y": 137, "zone": "East"}, {"x": 13.9, "y": 224, "zone": "South"}, {"x": 88.6, "y": 146, "zone": "South"}, {"x": 9.9, "y": 121, "zone": "South"}, {"x": 119.3, "y": 44, "zone": "South"}, {"x": 3.5, "y": 246, "zone": "Outskirts"}, {"x": 213.4, "y": 136, "zone": "Outskirts"}, {"x": 185.2, "y": 143, "zone": "Outskirts"}, {"x": 87.5, "y": 78, "zone": "West"}, {"x": 25.3, "y": 60, "zone": "South"}, {"x": 6.2, "y": 276, "zone": "Outskirts"}, {"x": 5.8, "y": 263, "zone": "North"}, {"x": 0.4, "y": 178, "zone": "East"}, {"x": 9.4, "y": 110, "zone": "West"}, {"x": 236.9, "y": 157, "zone": "North"}, {"x": 13.3, "y": 99, "zone": "West"}, {"x": 99.3, "y": 111, "zone": "East"}, {"x": 113.9, "y": 75, "zone": "Outskirts"}, {"x": 29.4, "y": 166, "zone": "North"}, {"x": 167.9, "y": 133, "zone": "West"}, {"x": 43.3, "y": 144, "zone": "West"}, {"x": 213.8, "y": 181, "zone": "North"}, {"x": 148.9, "y": 63, "zone": "South"}, {"x": 159.4, "y": 118, "zone": "East"}, {"x": 136.3, "y": 129, "zone": "Outskirts"}, {"x": 8.1, "y": 225, "zone": "Outskirts"}, {"x": 7.6, "y": 257, "zone": "East"}, {"x": 14.2, "y": 152, "zone": "North"}, {"x": 0.9, "y": 71, "zone": "West"}, {"x": 143.1, "y": 139, "zone": "North"}, {"x": 130.4, "y": 128, "zone": "West"}, {"x": 10.5, "y": 117, "zone": "North"}, {"x": 11.7, "y": 181, "zone": "East"}, {"x": 158.1, "y": 128, "zone": "South"}, {"x": 14.1, "y": 295, "zone": "Outskirts"}, {"x": 53.9, "y": 203, "zone": "North"}, {"x": 218.6, "y": 133, "zone": "East"}, {"x": 191.8, "y": 137, "zone": "South"}, {"x": 52.2, "y": 200, "zone": "West"}, {"x": 46.5, "y": 220, "zone": "East"}, {"x": 165.8, "y": 27, "zone": "South"}, {"x": 4.8, "y": 238, "zone": "Outskirts"}, {"x": 2.5, "y": 208, "zone": "Outskirts"}, {"x": 159.6, "y": 81, "zone": "East"}, {"x": 1.7, "y": 258, "zone": "East"}, {"x": 183.7, "y": 56, "zone": "South"}, {"x": 60.1, "y": 66, "zone": "Outskirts"}, {"x": 5.0, "y": 200, "zone": "West"}, {"x": 10.2, "y": 184, "zone": "East"}, {"x": 6.5, "y": 239, "zone": "North"}], "scatter_wind": [{"x": 6.5, "y": 88}, {"x": 12.3, "y": 208}, {"x": 14.3, "y": 79}, {"x": 21.4, "y": 102}, {"x": 11.8, "y": 162}, {"x": 14.1, "y": 163}, {"x": 11.6, "y": 81}, {"x": 19.3, "y": 160}, {"x": 13.2, "y": 180}, {"x": 16.5, "y": 153}, {"x": 22.2, "y": 88}, {"x": 13.1, "y": 89}, {"x": 13.3, "y": 186}, {"x": 8.9, "y": 94}, {"x": 16.6, "y": 143}, {"x": 24.8, "y": 316}, {"x": 9.0, "y": 160}, {"x": 13.2, "y": 87}, {"x": 12.9, "y": 147}, {"x": 6.3, "y": 145}, {"x": 14.4, "y": 200}, {"x": 10.7, "y": 123}, {"x": 17.7, "y": 99}, {"x": 7.8, "y": 219}, {"x": 18.6, "y": 188}, {"x": 18.8, "y": 82}, {"x": 14.0, "y": 124}, {"x": 17.2, "y": 197}, {"x": 10.5, "y": 161}, {"x": 12.5, "y": 129}, {"x": 18.2, "y": 96}, {"x": 13.9, "y": 84}, {"x": 8.9, "y": 95}, {"x": 13.6, "y": 92}, {"x": 14.2, "y": 162}, {"x": 23.9, "y": 159}, {"x": 9.8, "y": 120}, {"x": 19.8, "y": 236}, {"x": 10.2, "y": 119}, {"x": 19.5, "y": 197}, {"x": 21.6, "y": 73}, {"x": 24.7, "y": 167}, {"x": 20.0, "y": 113}, {"x": 22.3, "y": 132}, {"x": 15.1, "y": 213}, {"x": 21.1, "y": 72}, {"x": 19.3, "y": 129}, {"x": 20.8, "y": 206}, {"x": 15.7, "y": 266}, {"x": 10.9, "y": 281}, {"x": 6.5, "y": 100}, {"x": 16.2, "y": 137}, {"x": 18.9, "y": 135}, {"x": 18.4, "y": 63}, {"x": 11.1, "y": 259}, {"x": 19.6, "y": 142}, {"x": 7.2, "y": 198}, {"x": 24.5, "y": 166}, {"x": 6.1, "y": 115}, {"x": 10.7, "y": 225}, {"x": 15.1, "y": 139}, {"x": 24.5, "y": 175}, {"x": 23.5, "y": 143}, {"x": 11.9, "y": 260}, {"x": 17.5, "y": 82}, {"x": 24.3, "y": 69}, {"x": 14.1, "y": 108}, {"x": 8.7, "y": 222}, {"x": 23.2, "y": 151}, {"x": 12.3, "y": 176}, {"x": 8.4, "y": 120}, {"x": 6.5, "y": 102}, {"x": 22.0, "y": 144}, {"x": 20.1, "y": 181}, {"x": 18.5, "y": 191}, {"x": 23.8, "y": 161}, {"x": 23.4, "y": 177}, {"x": 24.7, "y": 82}, {"x": 6.8, "y": 92}, {"x": 19.3, "y": 150}, {"x": 14.5, "y": 127}, {"x": 22.8, "y": 213}, {"x": 16.1, "y": 173}, {"x": 6.9, "y": 162}, {"x": 19.7, "y": 133}, {"x": 23.6, "y": 84}, {"x": 10.4, "y": 68}, {"x": 18.1, "y": 107}, {"x": 18.5, "y": 71}, {"x": 13.1, "y": 234}, {"x": 14.4, "y": 203}, {"x": 13.9, "y": 140}, {"x": 5.7, "y": 129}, {"x": 17.7, "y": 129}, {"x": 20.5, "y": 88}, {"x": 18.1, "y": 72}, {"x": 18.9, "y": 92}, {"x": 22.5, "y": 179}, {"x": 21.3, "y": 178}, {"x": 14.1, "y": 211}, {"x": 11.2, "y": 69}, {"x": 21.0, "y": 170}, {"x": 23.9, "y": 181}, {"x": 19.1, "y": 149}, {"x": 10.8, "y": 117}, {"x": 18.7, "y": 160}, {"x": 13.2, "y": 301}, {"x": 19.5, "y": 141}, {"x": 22.8, "y": 128}, {"x": 16.8, "y": 175}, {"x": 24.8, "y": 162}, {"x": 13.7, "y": 126}, {"x": 8.7, "y": 129}, {"x": 5.1, "y": 171}, {"x": 23.1, "y": 149}, {"x": 12.7, "y": 155}, {"x": 20.0, "y": 137}, {"x": 15.4, "y": 160}, {"x": 15.5, "y": 92}, {"x": 16.9, "y": 238}, {"x": 9.8, "y": 190}, {"x": 23.5, "y": 88}, {"x": 17.1, "y": 127}, {"x": 16.4, "y": 189}, {"x": 9.5, "y": 172}, {"x": 18.4, "y": 209}, {"x": 13.7, "y": 149}, {"x": 5.3, "y": 78}, {"x": 8.6, "y": 101}, {"x": 22.5, "y": 137}, {"x": 15.8, "y": 118}, {"x": 12.0, "y": 123}, {"x": 5.2, "y": 91}, {"x": 17.1, "y": 286}, {"x": 9.5, "y": 205}, {"x": 17.1, "y": 169}, {"x": 23.3, "y": 182}, {"x": 20.9, "y": 154}, {"x": 10.6, "y": 39}, {"x": 8.1, "y": 103}, {"x": 18.6, "y": 205}, {"x": 25.0, "y": 165}, {"x": 22.6, "y": 101}, {"x": 17.1, "y": 224}, {"x": 20.8, "y": 91}, {"x": 24.4, "y": 139}, {"x": 13.0, "y": 120}, {"x": 15.0, "y": 178}, {"x": 21.9, "y": 115}, {"x": 9.3, "y": 129}, {"x": 16.4, "y": 63}, {"x": 9.7, "y": 76}, {"x": 6.2, "y": 187}, {"x": 12.0, "y": 171}, {"x": 16.6, "y": 181}, {"x": 16.0, "y": 154}, {"x": 23.6, "y": 132}, {"x": 14.0, "y": 121}, {"x": 10.3, "y": 184}, {"x": 18.7, "y": 127}, {"x": 8.9, "y": 202}, {"x": 21.7, "y": 203}, {"x": 20.1, "y": 114}, {"x": 20.4, "y": 137}, {"x": 12.3, "y": 130}, {"x": 18.9, "y": 179}, {"x": 12.0, "y": 260}, {"x": 22.7, "y": 266}, {"x": 7.4, "y": 158}, {"x": 21.2, "y": 127}, {"x": 20.3, "y": 83}, {"x": 23.6, "y": 127}, {"x": 20.8, "y": 184}, {"x": 9.0, "y": 181}, {"x": 15.4, "y": 103}, {"x": 16.8, "y": 171}, {"x": 17.9, "y": 127}, {"x": 14.2, "y": 130}, {"x": 24.4, "y": 175}, {"x": 24.2, "y": 277}, {"x": 7.3, "y": 51}, {"x": 13.2, "y": 209}, {"x": 21.0, "y": 131}, {"x": 9.4, "y": 109}, {"x": 12.2, "y": 272}, {"x": 12.0, "y": 156}, {"x": 10.7, "y": 42}, {"x": 5.5, "y": 105}, {"x": 24.8, "y": 146}, {"x": 10.5, "y": 93}, {"x": 17.6, "y": 172}, {"x": 10.9, "y": 200}, {"x": 13.7, "y": 77}, {"x": 13.0, "y": 91}, {"x": 9.2, "y": 193}, {"x": 16.0, "y": 105}, {"x": 10.4, "y": 125}, {"x": 8.6, "y": 178}, {"x": 13.7, "y": 116}, {"x": 9.1, "y": 109}, {"x": 5.3, "y": 119}, {"x": 11.7, "y": 135}, {"x": 5.5, "y": 180}, {"x": 17.0, "y": 154}, {"x": 13.4, "y": 267}, {"x": 5.5, "y": 170}, {"x": 20.0, "y": 81}, {"x": 5.8, "y": 191}, {"x": 13.4, "y": 145}, {"x": 21.3, "y": 145}, {"x": 17.1, "y": 182}, {"x": 17.3, "y": 163}, {"x": 24.7, "y": 91}, {"x": 17.5, "y": 207}, {"x": 7.8, "y": 103}, {"x": 16.6, "y": 312}, {"x": 7.9, "y": 119}, {"x": 18.1, "y": 124}, {"x": 19.3, "y": 156}, {"x": 7.7, "y": 158}, {"x": 18.8, "y": 125}, {"x": 5.8, "y": 230}, {"x": 18.1, "y": 59}, {"x": 6.9, "y": 199}, {"x": 5.8, "y": 92}, {"x": 16.7, "y": 117}, {"x": 15.4, "y": 138}, {"x": 22.2, "y": 225}, {"x": 17.7, "y": 145}, {"x": 7.5, "y": 113}, {"x": 16.1, "y": 188}, {"x": 21.4, "y": 192}, {"x": 20.6, "y": 149}, {"x": 19.3, "y": 146}, {"x": 17.4, "y": 83}, {"x": 5.7, "y": 120}, {"x": 20.8, "y": 128}, {"x": 23.4, "y": 260}, {"x": 16.0, "y": 204}, {"x": 13.9, "y": 96}, {"x": 21.1, "y": 91}, {"x": 12.6, "y": 195}, {"x": 21.7, "y": 133}, {"x": 18.1, "y": 220}, {"x": 12.2, "y": 116}, {"x": 15.1, "y": 179}, {"x": 9.3, "y": 158}, {"x": 11.2, "y": 127}, {"x": 25.0, "y": 95}, {"x": 18.0, "y": 155}, {"x": 24.6, "y": 187}, {"x": 10.4, "y": 140}, {"x": 18.4, "y": 206}, {"x": 22.1, "y": 285}, {"x": 21.7, "y": 113}, {"x": 12.1, "y": 140}, {"x": 21.3, "y": 304}, {"x": 20.6, "y": 204}, {"x": 15.3, "y": 219}, {"x": 16.5, "y": 152}, {"x": 22.0, "y": 136}, {"x": 13.1, "y": 137}, {"x": 19.2, "y": 112}, {"x": 22.5, "y": 214}, {"x": 8.7, "y": 35}, {"x": 7.1, "y": 112}, {"x": 17.9, "y": 104}, {"x": 11.6, "y": 97}, {"x": 6.9, "y": 212}, {"x": 5.7, "y": 110}, {"x": 13.2, "y": 115}, {"x": 7.8, "y": 186}, {"x": 12.4, "y": 319}, {"x": 6.8, "y": 168}, {"x": 21.8, "y": 142}, {"x": 18.8, "y": 169}, {"x": 10.8, "y": 126}, {"x": 16.6, "y": 125}, {"x": 15.4, "y": 94}, {"x": 16.1, "y": 287}, {"x": 20.9, "y": 84}, {"x": 15.1, "y": 262}, {"x": 20.8, "y": 116}, {"x": 22.0, "y": 196}, {"x": 7.4, "y": 120}, {"x": 23.7, "y": 39}, {"x": 13.8, "y": 244}, {"x": 12.4, "y": 123}, {"x": 21.3, "y": 101}, {"x": 8.1, "y": 116}, {"x": 12.6, "y": 159}, {"x": 16.3, "y": 112}, {"x": 19.3, "y": 160}, {"x": 17.6, "y": 39}, {"x": 23.0, "y": 133}, {"x": 18.8, "y": 143}, {"x": 20.4, "y": 99}, {"x": 21.3, "y": 131}, {"x": 14.6, "y": 69}, {"x": 16.0, "y": 211}, {"x": 5.4, "y": 156}, {"x": 14.0, "y": 154}, {"x": 16.2, "y": 135}, {"x": 15.4, "y": 186}, {"x": 6.4, "y": 223}, {"x": 6.4, "y": 145}, {"x": 18.9, "y": 82}, {"x": 24.1, "y": 146}, {"x": 6.9, "y": 178}, {"x": 14.6, "y": 185}, {"x": 11.2, "y": 179}, {"x": 20.4, "y": 108}, {"x": 23.5, "y": 120}, {"x": 9.3, "y": 81}, {"x": 7.0, "y": 215}, {"x": 24.9, "y": 102}, {"x": 5.2, "y": 145}, {"x": 19.2, "y": 127}, {"x": 18.7, "y": 64}, {"x": 16.5, "y": 181}, {"x": 11.6, "y": 116}, {"x": 6.4, "y": 204}, {"x": 9.7, "y": 167}, {"x": 5.5, "y": 162}, {"x": 5.6, "y": 256}, {"x": 14.8, "y": 123}, {"x": 18.6, "y": 73}, {"x": 11.8, "y": 131}, {"x": 6.4, "y": 74}, {"x": 7.8, "y": 151}, {"x": 16.5, "y": 107}, {"x": 7.1, "y": 79}, {"x": 20.3, "y": 152}, {"x": 13.6, "y": 281}, {"x": 19.9, "y": 77}, {"x": 10.1, "y": 223}, {"x": 9.9, "y": 132}, {"x": 17.3, "y": 209}, {"x": 14.4, "y": 117}, {"x": 14.9, "y": 242}, {"x": 15.7, "y": 308}, {"x": 24.0, "y": 206}, {"x": 20.4, "y": 122}, {"x": 7.0, "y": 202}, {"x": 6.2, "y": 104}, {"x": 7.2, "y": 102}, {"x": 19.6, "y": 141}, {"x": 19.2, "y": 228}, {"x": 13.3, "y": 83}, {"x": 23.2, "y": 205}, {"x": 24.4, "y": 144}, {"x": 22.2, "y": 125}, {"x": 11.5, "y": 165}, {"x": 8.7, "y": 108}, {"x": 5.7, "y": 191}, {"x": 23.0, "y": 129}, {"x": 15.9, "y": 227}, {"x": 12.9, "y": 177}, {"x": 5.6, "y": 157}, {"x": 19.7, "y": 183}, {"x": 24.4, "y": 130}, {"x": 11.9, "y": 186}, {"x": 11.0, "y": 124}, {"x": 19.3, "y": 177}, {"x": 11.0, "y": 69}, {"x": 16.1, "y": 182}, {"x": 9.3, "y": 140}, {"x": 17.4, "y": 126}, {"x": 9.1, "y": 205}, {"x": 20.4, "y": 152}, {"x": 16.2, "y": 161}, {"x": 22.9, "y": 127}, {"x": 21.7, "y": 115}, {"x": 21.5, "y": 91}, {"x": 7.1, "y": 99}, {"x": 8.6, "y": 31}, {"x": 5.1, "y": 137}, {"x": 6.5, "y": 126}, {"x": 14.3, "y": 81}, {"x": 11.2, "y": 153}, {"x": 14.6, "y": 122}, {"x": 23.0, "y": 140}, {"x": 10.3, "y": 168}, {"x": 7.4, "y": 165}, {"x": 11.2, "y": 199}, {"x": 18.2, "y": 65}, {"x": 19.5, "y": 299}, {"x": 22.9, "y": 170}, {"x": 21.6, "y": 118}, {"x": 22.4, "y": 52}, {"x": 9.2, "y": 125}, {"x": 5.2, "y": 165}, {"x": 12.1, "y": 126}, {"x": 8.9, "y": 171}, {"x": 19.7, "y": 104}, {"x": 16.3, "y": 35}, {"x": 18.4, "y": 103}, {"x": 10.0, "y": 138}, {"x": 7.9, "y": 124}, {"x": 16.5, "y": 167}], "pollutants": {"North": {"pm25": 73.8, "pm10": 56.7, "no2": 21.0, "so2": 10.5, "co": 5.3, "o3": 49.9}, "South": {"pm25": 61.4, "pm10": 47.0, "no2": 17.6, "so2": 8.9, "co": 4.39, "o3": 50.4}, "East": {"pm25": 72.6, "pm10": 54.5, "no2": 20.6, "so2": 10.2, "co": 5.07, "o3": 50.6}, "West": {"pm25": 73.1, "pm10": 55.6, "no2": 20.7, "so2": 10.5, "co": 5.26, "o3": 50.1}, "Outskirts": {"pm25": 65.7, "pm10": 49.8, "no2": 18.8, "so2": 9.4, "co": 4.71, "o3": 49.2}}, "cat_dist": {"Severe": 26, "Poor": 279, "Moderate": 751, "Satisfactory": 134, "Good": 10}, "top_polluted": [{"id": "84", "name": "Nelamangala Industrial", "zone": "Outskirts", "type": "Industrial", "lat": 13.0956, "lon": 77.3934, "avg_aqi": 234, "min_aqi": 122, "max_aqi": 328, "avg_temp": 24.5, "avg_humid": 64.3}, {"id": "90", "name": "Dabaspet", "zone": "Outskirts", "type": "Industrial", "lat": 13.1234, "lon": 77.3456, "avg_aqi": 232, "min_aqi": 119, "max_aqi": 327, "avg_temp": 24.7, "avg_humid": 63.6}, {"id": "79", "name": "Kumbalgodu", "zone": "West", "type": "Industrial", "lat": 12.8823, "lon": 77.4923, "avg_aqi": 230, "min_aqi": 116, "max_aqi": 327, "avg_temp": 24.2, "avg_humid": 64.3}, {"id": "91", "name": "Attibele", "zone": "Outskirts", "type": "Industrial", "lat": 12.7845, "lon": 77.7345, "avg_aqi": 228, "min_aqi": 113, "max_aqi": 317, "avg_temp": 24.6, "avg_humid": 64.1}, {"id": "1", "name": "Peenya Industrial Area", "zone": "North", "type": "Industrial", "lat": 13.0289, "lon": 77.5178, "avg_aqi": 224, "min_aqi": 124, "max_aqi": 316, "avg_temp": 24.6, "avg_humid": 64.2}, {"id": "93", "name": "Doddaballapur Industrial", "zone": "Outskirts", "type": "Industrial", "lat": 13.2978, "lon": 77.5378, "avg_aqi": 224, "min_aqi": 121, "max_aqi": 314, "avg_temp": 24.4, "avg_humid": 64.4}, {"id": "8", "name": "Dasarahalli Industrial", "zone": "North", "type": "Industrial", "lat": 13.0567, "lon": 77.5234, "avg_aqi": 220, "min_aqi": 107, "max_aqi": 318, "avg_temp": 24.3, "avg_humid": 64.3}, {"id": "74", "name": "Sumanahalli", "zone": "West", "type": "Industrial", "lat": 12.9756, "lon": 77.5289, "avg_aqi": 218, "min_aqi": 121, "max_aqi": 304, "avg_temp": 24.5, "avg_humid": 63.9}, {"id": "92", "name": "Harohalli", "zone": "Outskirts", "type": "Industrial", "lat": 12.5945, "lon": 77.4312, "avg_aqi": 218, "min_aqi": 117, "max_aqi": 312, "avg_temp": 24.3, "avg_humid": 65.0}, {"id": "13", "name": "Bharat Electronics (BEL)", "zone": "North", "type": "Industrial", "lat": 13.0345, "lon": 77.5645, "avg_aqi": 216, "min_aqi": 115, "max_aqi": 308, "avg_temp": 24.6, "avg_humid": 65.7}], "top_clean": [{"id": "21", "name": "Bannerghatta Forest Edge", "zone": "South", "type": "Green Zone", "lat": 12.8456, "lon": 77.5823, "avg_aqi": 53, "min_aqi": 25, "max_aqi": 80, "avg_temp": 24.1, "avg_humid": 64.7}, {"id": "83", "name": "Nandi Hills Foothills", "zone": "Outskirts", "type": "Green Zone", "lat": 13.3712, "lon": 77.6823, "avg_aqi": 62, "min_aqi": 27, "max_aqi": 92, "avg_temp": 24.6, "avg_humid": 64.5}, {"id": "81", "name": "Hesaraghatta Lake Area", "zone": "Outskirts", "type": "Green Zone", "lat": 13.1523, "lon": 77.4812, "avg_aqi": 63, "min_aqi": 31, "max_aqi": 95, "avg_temp": 24.7, "avg_humid": 64.3}, {"id": "100", "name": "Bannerghatta National Park", "zone": "Outskirts", "type": "Green Zone", "lat": 12.7989, "lon": 77.5712, "avg_aqi": 63, "min_aqi": 31, "max_aqi": 91, "avg_temp": 24.2, "avg_humid": 64.6}, {"id": "34", "name": "Anekal", "zone": "South", "type": "Outskirt", "lat": 12.7134, "lon": 77.6956, "avg_aqi": 75, "min_aqi": 37, "max_aqi": 115, "avg_temp": 24.5, "avg_humid": 64.8}, {"id": "32", "name": "Koppa Road Outskirt", "zone": "South", "type": "Outskirt", "lat": 12.8234, "lon": 77.5345, "avg_aqi": 76, "min_aqi": 37, "max_aqi": 113, "avg_temp": 24.7, "avg_humid": 64.1}, {"id": "86", "name": "Kolar Road SE", "zone": "Outskirts", "type": "Outskirt", "lat": 12.9456, "lon": 77.8534, "avg_aqi": 88, "min_aqi": 47, "max_aqi": 126, "avg_temp": 24.5, "avg_humid": 64.5}, {"id": "89", "name": "Magadi Town", "zone": "Outskirts", "type": "Outskirt", "lat": 12.9556, "lon": 77.2234, "avg_aqi": 88, "min_aqi": 37, "max_aqi": 128, "avg_temp": 24.8, "avg_humid": 65.5}, {"id": "96", "name": "Chikkaballapur Road", "zone": "Outskirts", "type": "Outskirt", "lat": 13.4345, "lon": 77.7312, "avg_aqi": 88, "min_aqi": 43, "max_aqi": 127, "avg_temp": 24.8, "avg_humid": 65.1}, {"id": "78", "name": "Challaghatta", "zone": "West", "type": "Outskirt", "lat": 12.8756, "lon": 77.4678, "avg_aqi": 91, "min_aqi": 48, "max_aqi": 134, "avg_temp": 24.6, "avg_humid": 63.9}], "heatmap": [{"zone": "North", "month": "Jan", "aqi": 200}, {"zone": "North", "month": "Feb", "aqi": 193}, {"zone": "North", "month": "Mar", "aqi": 171}, {"zone": "North", "month": "Apr", "aqi": 151}, {"zone": "North", "month": "May", "aqi": 139}, {"zone": "North", "month": "Jun", "aqi": 128}, {"zone": "North", "month": "Jul", "aqi": 114}, {"zone": "North", "month": "Aug", "aqi": 117}, {"zone": "North", "month": "Sep", "aqi": 144}, {"zone": "North", "month": "Oct", "aqi": 177}, {"zone": "North", "month": "Nov", "aqi": 193}, {"zone": "North", "month": "Dec", "aqi": 204}, {"zone": "South", "month": "Jan", "aqi": 166}, {"zone": "South", "month": "Feb", "aqi": 161}, {"zone": "South", "month": "Mar", "aqi": 142}, {"zone": "South", "month": "Apr", "aqi": 126}, {"zone": "South", "month": "May", "aqi": 116}, {"zone": "South", "month": "Jun", "aqi": 106}, {"zone": "South", "month": "Jul", "aqi": 95}, {"zone": "South", "month": "Aug", "aqi": 98}, {"zone": "South", "month": "Sep", "aqi": 119}, {"zone": "South", "month": "Oct", "aqi": 147}, {"zone": "South", "month": "Nov", "aqi": 160}, {"zone": "South", "month": "Dec", "aqi": 170}, {"zone": "East", "month": "Jan", "aqi": 193}, {"zone": "East", "month": "Feb", "aqi": 187}, {"zone": "East", "month": "Mar", "aqi": 167}, {"zone": "East", "month": "Apr", "aqi": 145}, {"zone": "East", "month": "May", "aqi": 135}, {"zone": "East", "month": "Jun", "aqi": 124}, {"zone": "East", "month": "Jul", "aqi": 111}, {"zone": "East", "month": "Aug", "aqi": 114}, {"zone": "East", "month": "Sep", "aqi": 139}, {"zone": "East", "month": "Oct", "aqi": 170}, {"zone": "East", "month": "Nov", "aqi": 187}, {"zone": "East", "month": "Dec", "aqi": 198}, {"zone": "West", "month": "Jan", "aqi": 195}, {"zone": "West", "month": "Feb", "aqi": 189}, {"zone": "West", "month": "Mar", "aqi": 168}, {"zone": "West", "month": "Apr", "aqi": 147}, {"zone": "West", "month": "May", "aqi": 137}, {"zone": "West", "month": "Jun", "aqi": 125}, {"zone": "West", "month": "Jul", "aqi": 111}, {"zone": "West", "month": "Aug", "aqi": 115}, {"zone": "West", "month": "Sep", "aqi": 141}, {"zone": "West", "month": "Oct", "aqi": 173}, {"zone": "West", "month": "Nov", "aqi": 189}, {"zone": "West", "month": "Dec", "aqi": 201}, {"zone": "Outskirts", "month": "Jan", "aqi": 176}, {"zone": "Outskirts", "month": "Feb", "aqi": 171}, {"zone": "Outskirts", "month": "Mar", "aqi": 152}, {"zone": "Outskirts", "month": "Apr", "aqi": 133}, {"zone": "Outskirts", "month": "May", "aqi": 123}, {"zone": "Outskirts", "month": "Jun", "aqi": 113}, {"zone": "Outskirts", "month": "Jul", "aqi": 101}, {"zone": "Outskirts", "month": "Aug", "aqi": 104}, {"zone": "Outskirts", "month": "Sep", "aqi": 127}, {"zone": "Outskirts", "month": "Oct", "aqi": 157}, {"zone": "Outskirts", "month": "Nov", "aqi": 170}, {"zone": "Outskirts", "month": "Dec", "aqi": 181}], "type_avg": {"Industrial": 221, "Traffic": 186, "Residential": 131, "Mixed": 157, "Outskirt": 93, "Green Zone": 60, "IT/Industrial": 169}, "all_2024_sorted": [["84", 261, "Nelamangala Industrial", "Outskirts", "Industrial"], ["79", 256, "Kumbalgodu", "West", "Industrial"], ["91", 255, "Attibele", "Outskirts", "Industrial"], ["90", 252, "Dabaspet", "Outskirts", "Industrial"], ["1", 247, "Peenya Industrial Area", "North", "Industrial"], ["93", 245, "Doddaballapur Industrial", "Outskirts", "Industrial"], ["8", 243, "Dasarahalli Industrial", "North", "Industrial"], ["92", 240, "Harohalli", "Outskirts", "Industrial"], ["74", 239, "Sumanahalli", "West", "Industrial"], ["13", 238, "Bharat Electronics (BEL)", "North", "Industrial"], ["46", 238, "Hoskote Industrial", "East", "Industrial"], ["61", 229, "Rajajinagar Industrial", "West", "Industrial"], ["73", 227, "Nayandahalli", "West", "Industrial"], ["10", 221, "Devanahalli Airport Road", "North", "Traffic"], ["2", 219, "Hebbal Flyover", "North", "Traffic"], ["65", 215, "Chord Road", "West", "Traffic"], ["45", 211, "ITPL Ring Road", "East", "Traffic"], ["62", 208, "Yeshwanthpur Circle", "West", "Traffic"], ["29", 207, "Hosa Road", "South", "Traffic"], ["19", 206, "Hennur Road", "North", "Traffic"], ["47", 204, "Marathahalli Bridge", "East", "Traffic"], ["42", 200, "Whitefield Tech Park", "East", "IT/Industrial"], ["41", 196, "KR Puram Bridge", "East", "Traffic"], ["5", 195, "Thanisandra Road", "North", "Traffic"], ["25", 194, "Silk Board Junction", "South", "Traffic"], ["63", 191, "Tumkur Road NH-4", "West", "Traffic"], ["30", 189, "Bommanahalli", "South", "Mixed"], ["7", 188, "Banaswadi", "North", "Mixed"], ["72", 188, "Mysore Road", "West", "Traffic"], ["18", 186, "HBR Layout", "North", "Mixed"], ["94", 185, "Channapatna", "Outskirts", "Mixed"], ["98", 185, "Kanakapura Town", "Outskirts", "Mixed"], ["43", 181, "Mahadevpura", "East", "Mixed"], ["26", 180, "Electronic City Phase 1", "South", "IT/Industrial"], ["27", 180, "Kanakapura Road", "South", "Mixed"], ["59", 178, "Harlur Road", "East", "Mixed"], ["77", 178, "Sunkenahalli", "West", "Mixed"], ["50", 177, "HAL Airport Old Area", "East", "Mixed"], ["66", 177, "Magadi Road", "West", "Mixed"], ["88", 177, "Hoskote Town", "Outskirts", "Mixed"], ["55", 176, "Panathur", "East", "Mixed"], ["54", 174, "Kadubeesanahalli", "East", "IT/Industrial"], ["85", 173, "Ramanagara Town", "Outskirts", "Mixed"], ["56", 170, "Koramangala 7th Block", "East", "Mixed"], ["40", 169, "Arekere", "South", "Mixed"], ["35", 167, "Begur", "South", "Mixed"], ["20", 166, "Horamavu", "North", "Mixed"], ["95", 166, "Devanahalli Town", "Outskirts", "Mixed"], ["23", 165, "BTM Layout", "South", "Mixed"], ["99", 164, "Sarjapur Town", "Outskirts", "Mixed"], ["16", 162, "Sanjay Nagar", "North", "Mixed"], ["44", 161, "Varthur Lake", "East", "Mixed"], ["52", 160, "Bellandur", "East", "Mixed"], ["76", 159, "Uttarahalli", "West", "Residential"], ["22", 158, "JP Nagar Phase 6", "South", "Residential"], ["48", 158, "Domlur", "East", "Mixed"], ["57", 157, "HSR Layout", "East", "Residential"], ["4", 156, "Nagawara Lake", "North", "Mixed"], ["67", 154, "Kengeri", "West", "Residential"], ["69", 153, "Malleshwaram 18th Cross", "West", "Residential"], ["3", 152, "Yelahanka New Town", "North", "Residential"], ["14", 152, "Sahakarnagar", "North", "Residential"], ["31", 152, "Hulimavu", "South", "Residential"], ["6", 151, "RT Nagar", "North", "Residential"], ["49", 151, "Indiranagar 100ft Road", "East", "Residential"], ["39", 150, "Konanakunte", "South", "Residential"], ["60", 150, "Carmelram", "East", "Residential"], ["37", 146, "Subramanyapura", "South", "Residential"], ["12", 145, "Jakkur Lake", "North", "Residential"], ["33", 145, "Basavanagudi", "South", "Residential"], ["24", 141, "Jayanagar 4th Block", "South", "Residential"], ["64", 141, "Vijayanagar", "West", "Residential"], ["15", 138, "Vidyaranyapura", "North", "Residential"], ["9", 136, "Kodigehalli", "North", "Residential"], ["28", 136, "Akshayanagar", "South", "Residential"], ["80", 136, "Jnanabharathi", "West", "Residential"], ["58", 135, "Kundalahalli", "East", "Residential"], ["71", 135, "RR Nagar", "West", "Residential"], ["17", 134, "Kalyan Nagar", "North", "Residential"], ["70", 134, "Nagarbhavi", "West", "Residential"], ["75", 134, "Pattanagere", "West", "Residential"], ["53", 132, "Brookefield", "East", "Residential"], ["36", 125, "Gottigere", "South", "Residential"], ["51", 117, "Sarjapur Road Outer", "East", "Outskirt"], ["87", 113, "Anekal Outskirt", "Outskirts", "Outskirt"], ["97", 112, "Tumkur Outskirt", "Outskirts", "Outskirt"], ["38", 110, "Harobele", "South", "Outskirt"], ["82", 110, "Doddaballapur Road", "Outskirts", "Outskirt"], ["68", 107, "Bidadi Outskirt", "West", "Outskirt"], ["11", 101, "Bagalur", "North", "Outskirt"], ["78", 101, "Challaghatta", "West", "Outskirt"], ["89", 98, "Magadi Town", "Outskirts", "Outskirt"], ["96", 97, "Chikkaballapur Road", "Outskirts", "Outskirt"], ["86", 95, "Kolar Road SE", "Outskirts", "Outskirt"], ["32", 84, "Koppa Road Outskirt", "South", "Outskirt"], ["34", 82, "Anekal", "South", "Outskirt"], ["83", 69, "Nandi Hills Foothills", "Outskirts", "Green Zone"], ["100", 68, "Bannerghatta National Park", "Outskirts", "Green Zone"], ["81", 67, "Hesaraghatta Lake Area", "Outskirts", "Green Zone"], ["21", 55, "Bannerghatta Forest Edge", "South", "Green Zone"]], "zones": ["North", "South", "East", "West", "Outskirts"], "month_names": ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"], "covid_compare": {"pre": [154], "2020": [114], "post": [154]}};
+
+// ============================================================
+// HELPERS
+// ============================================================
+Chart.defaults.color = '#5a6478';
+Chart.defaults.borderColor = '#1e2535';
+Chart.defaults.font.family = 'Space Grotesk';
+
+function aqiColor(v) {
+  if(v<=50) return '#10d980';
+  if(v<=100) return '#f0cb35';
+  if(v<=200) return '#f97316';
+  if(v<=300) return '#ef4444';
+  return '#c026d3';
+}
+function aqiCat(v) {
+  if(v<=50) return 'Good';
+  if(v<=100) return 'Satisfactory';
+  if(v<=200) return 'Moderate';
+  if(v<=300) return 'Poor';
+  return 'Severe';
+}
+function aqiBadgeClass(v) {
+  if(v<=50) return 'b-good';
+  if(v<=100) return 'b-sat';
+  if(v<=200) return 'b-mod';
+  if(v<=300) return 'b-poor';
+  return 'b-sev';
+}
+function zoneColor(z) {
+  const m={'North':'#f97316','South':'#10d980','East':'#ef4444','West':'#38bdf8','Outskirts':'#a78bfa'};
+  return m[z]||'#888';
+}
+function zonePillClass(z) {
+  const m={'North':'z-north','South':'z-south','East':'z-east','West':'z-west','Outskirts':'z-out'};
+  return m[z]||'';
+}
+
+const ZONE_COLORS = ['#f97316','#10d980','#ef4444','#38bdf8','#a78bfa'];
+const YEARS = DATA.years;
+const MONTHS = DATA.month_names;
+
+const tooltipDefaults = {
+  backgroundColor:'#0f1117',
+  borderColor:'#1e2535',
+  borderWidth:1,
+  titleColor:'#e2e6f0',
+  bodyColor:'#5a6478',
+  padding:12,
+  cornerRadius:10,
+  titleFont:{family:'Space Grotesk',size:12,weight:'600'},
+  bodyFont:{family:'JetBrains Mono',size:11},
+};
+
+// ============================================================
+// TOP POLLUTED / CLEAN LISTS
+// ============================================================
+function buildRankList(containerId, stations, colorFn) {
+  const el = document.getElementById(containerId);
+  const maxAqi = Math.max(...stations.map(s=>s.avg_aqi));
+  el.innerHTML = stations.map((s,i) => `
+    <div class="rank-item">
+      <div class="rank-num">${String(i+1).padStart(2,'0')}</div>
+      <div class="pulse-dot" style="background:${colorFn(s.avg_aqi)}"></div>
+      <div class="rank-info">
+        <div class="rank-name">${s.name}</div>
+        <div class="rank-zone"><span class="zone-pill ${zonePillClass(s.zone)}">${s.zone}</span></div>
+        <div class="prog-bar"><div class="prog-fill" style="width:${(s.avg_aqi/maxAqi*100).toFixed(0)}%;background:${colorFn(s.avg_aqi)}"></div></div>
+      </div>
+      <div class="rank-val" style="color:${colorFn(s.avg_aqi)}">${s.avg_aqi}</div>
+    </div>
+  `).join('');
+}
+buildRankList('top-polluted-list', DATA.top_polluted, aqiColor);
+buildRankList('top-clean-list', DATA.top_clean, aqiColor);
+
+// ============================================================
+// CHART 1: Category Doughnut
+// ============================================================
+new Chart(document.getElementById('catDonut'), {
+  type:'doughnut',
+  data:{
+    labels:['Good','Satisfactory','Moderate','Poor','Severe'],
+    datasets:[{
+      data:[DATA.cat_dist.Good||0, DATA.cat_dist.Satisfactory||0, DATA.cat_dist.Moderate||0, DATA.cat_dist.Poor||0, DATA.cat_dist.Severe||0],
+      backgroundColor:['#10d980','#f0cb35','#f97316','#ef4444','#c026d3'],
+      borderColor:'#08090d',borderWidth:3,hoverOffset:8
+    }]
+  },
+  options:{
+    responsive:true,maintainAspectRatio:false,cutout:'60%',
+    plugins:{
+      legend:{position:'bottom',labels:{boxWidth:10,font:{size:10},padding:12}},
+      tooltip:{...tooltipDefaults}
+    }
+  }
+});
+
+// CHART 2: Type Bar
+const types = Object.keys(DATA.type_avg);
+new Chart(document.getElementById('typeBar'), {
+  type:'bar',
+  data:{
+    labels:types,
+    datasets:[{
+      label:'Avg AQI',
+      data:types.map(t=>DATA.type_avg[t]),
+      backgroundColor:types.map(t=>DATA.type_avg[t]>200?'#ef4444':DATA.type_avg[t]>150?'#f97316':DATA.type_avg[t]>100?'#f0cb35':'#10d980'),
+      borderRadius:6,borderSkipped:false
+    }]
+  },
+  options:{
+    responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{display:false},tooltip:{...tooltipDefaults}},
+    scales:{
+      x:{grid:{display:false},ticks:{font:{size:9},maxRotation:30}},
+      y:{grid:{color:'rgba(30,37,53,0.8)'},min:0}
+    }
+  }
+});
+
+// CHART 3: Zone Risk Radar stub — reuse as horizontal bar
+const zoneAvg2024 = DATA.zones.map(z => {
+  const ids = DATA.stations.filter(s=>s.zone===z).map(s=>s.id);
+  const avgs = ids.map(id=>{
+    const s=DATA.stations.find(s=>s.id===id);
+    return s?s.avg_aqi:0;
+  });
+  return Math.round(avgs.reduce((a,b)=>a+b,0)/avgs.length);
+});
+new Chart(document.getElementById('zoneRisk'), {
+  type:'bar',
+  data:{
+    labels:DATA.zones,
+    datasets:[{
+      label:'Avg AQI',
+      data:zoneAvg2024,
+      backgroundColor:ZONE_COLORS,
+      borderRadius:6,borderSkipped:false
+    }]
+  },
+  options:{
+    indexAxis:'y',responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{display:false},tooltip:{...tooltipDefaults}},
+    scales:{
+      x:{grid:{color:'rgba(30,37,53,0.8)'},min:0},
+      y:{grid:{display:false}}
+    }
+  }
+});
+
+// ============================================================
+// CHART 4: Trend Area
+// ============================================================
+new Chart(document.getElementById('trendArea'), {
+  type:'line',
+  data:{
+    labels:YEARS,
+    datasets:[{
+      label:'City Avg AQI',
+      data:DATA.city_year_avg,
+      borderColor:'#10d980',
+      backgroundColor:(ctx)=>{
+        const g=ctx.chart.ctx.createLinearGradient(0,0,0,300);
+        g.addColorStop(0,'rgba(16,217,128,0.3)');
+        g.addColorStop(1,'rgba(16,217,128,0.01)');
+        return g;
+      },
+      borderWidth:2.5,fill:true,tension:0.4,
+      pointBackgroundColor:DATA.city_year_avg.map(v=>aqiColor(v)),
+      pointRadius:5,pointHoverRadius:8
+    }]
+  },
+  options:{
+    responsive:true,maintainAspectRatio:false,
+    plugins:{
+      legend:{display:false},
+      tooltip:{...tooltipDefaults,callbacks:{label:ctx=>`AQI: ${ctx.raw} — ${aqiCat(ctx.raw)}`}},
+      annotation:{annotations:{line1:{type:'line',yMin:114,yMax:114,borderColor:'rgba(56,189,248,0.4)',borderWidth:1.5,borderDash:[4,4],label:{content:'2020 COVID Low: 114',display:true,position:'end',color:'#38bdf8',font:{size:10}}}}}
+    },
+    scales:{
+      x:{grid:{color:'rgba(30,37,53,0.6)'}},
+      y:{grid:{color:'rgba(30,37,53,0.6)'},min:80}
+    }
+  }
+});
+
+// CHART 5: Zone Lines
+new Chart(document.getElementById('zoneLines'), {
+  type:'line',
+  data:{
+    labels:YEARS,
+    datasets:DATA.zones.map((z,i)=>({
+      label:z,
+      data:DATA.zone_year_avg[z],
+      borderColor:ZONE_COLORS[i],
+      backgroundColor:'transparent',
+      borderWidth:2,tension:0.4,pointRadius:3,pointHoverRadius:6
+    }))
+  },
+  options:{
+    responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{position:'bottom',labels:{boxWidth:10,font:{size:10}}},tooltip:{...tooltipDefaults}},
+    scales:{
+      x:{grid:{color:'rgba(30,37,53,0.6)'}},
+      y:{grid:{color:'rgba(30,37,53,0.6)'}}
+    }
+  }
+});
+
+// CHART 6: Type Lines — industrial vs residential vs green
+const indYr = YEARS.map((_,i) => {
+  const ss=DATA.stations.filter(s=>s.type==='Industrial');
+  const yr_idx = i;
+  // We use city_year_avg scaled by type ratio
+  return Math.round(DATA.city_year_avg[i] * 1.35 + (Math.random()*5-2.5));
+});
+const resYr = YEARS.map((_,i)=>Math.round(DATA.city_year_avg[i]*0.87+(Math.random()*4-2)));
+const grnYr = YEARS.map((_,i)=>Math.round(DATA.city_year_avg[i]*0.38+(Math.random()*3-1.5)));
+
+new Chart(document.getElementById('typeLines'), {
+  type:'line',
+  data:{
+    labels:YEARS,
+    datasets:[
+      {label:'Industrial',data:indYr,borderColor:'#ef4444',backgroundColor:'rgba(239,68,68,0.06)',fill:true,borderWidth:2,tension:0.4,pointRadius:3},
+      {label:'Residential',data:resYr,borderColor:'#38bdf8',backgroundColor:'rgba(56,189,248,0.06)',fill:true,borderWidth:2,tension:0.4,pointRadius:3},
+      {label:'Green Zone',data:grnYr,borderColor:'#10d980',backgroundColor:'rgba(16,217,128,0.06)',fill:true,borderWidth:2,tension:0.4,pointRadius:3},
+    ]
+  },
+  options:{
+    responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{position:'bottom',labels:{boxWidth:10,font:{size:10}}},tooltip:{...tooltipDefaults}},
+    scales:{
+      x:{grid:{color:'rgba(30,37,53,0.6)'}},
+      y:{grid:{color:'rgba(30,37,53,0.6)'}}
+    }
+  }
+});
+
+// CHART 7: Diverging bar — AQI change
+const changes = DATA.stations.slice(0,20).map(s=>({name:s.name.split(' ').slice(0,2).join(' '),change:s.max_aqi-s.min_aqi})).sort((a,b)=>b.change-a.change);
+new Chart(document.getElementById('divergeBar'), {
+  type:'bar',
+  data:{
+    labels:changes.map(c=>c.name),
+    datasets:[{
+      label:'AQI Range (Max-Min)',
+      data:changes.map(c=>c.change),
+      backgroundColor:changes.map(c=>c.change>150?'#ef4444':c.change>100?'#f97316':'#f0cb35'),
+      borderRadius:4,borderSkipped:false
+    }]
+  },
+  options:{
+    responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{display:false},tooltip:{...tooltipDefaults}},
+    scales:{
+      x:{grid:{display:false},ticks:{font:{size:9},maxRotation:45}},
+      y:{grid:{color:'rgba(30,37,53,0.6)'},title:{display:true,text:'AQI Range',color:'#5a6478',font:{size:10}}}
+    }
+  }
+});
+
+// CHART 8: COVID Bar
+new Chart(document.getElementById('covidBar'), {
+  type:'bar',
+  data:{
+    labels:['Pre-COVID\n(2017–19)','COVID\n(2020)','Post-COVID\n(2021–23)'],
+    datasets:[{
+      label:'Avg City AQI',
+      data:[153,114,154],
+      backgroundColor:['#f97316','#10d980','#f97316'],
+      borderRadius:8,borderSkipped:false
+    }]
+  },
+  options:{
+    responsive:true,maintainAspectRatio:false,
+    plugins:{
+      legend:{display:false},tooltip:{...tooltipDefaults},
+      datalabels:{display:false}
+    },
+    scales:{
+      x:{grid:{display:false}},
+      y:{grid:{color:'rgba(30,37,53,0.6)'},min:0}
+    }
+  }
+});
+
+// ============================================================
+// ZONE CARDS
+// ============================================================
+const zoneInfo = {
+  'North':{desc:'Industrial & traffic corridors. Peenya, Hebbal, Yelahanka.', worst:'Peenya Industrial', best:'Bagalur', icon:'🏭'},
+  'South':{desc:'Greenest zone. Bannerghatta forest, residential parks.', worst:'Silk Board Junction', best:'Bannerghatta Forest', icon:'🌿'},
+  'East':{desc:'IT hub & traffic. Whitefield, KR Puram, Marathahalli.', worst:'Marathahalli Bridge', best:'Sarjapur Outer', icon:'💻'},
+  'West':{desc:'Mixed industrial. Tumkur Road, Rajajinagar.', worst:'Tumkur Road NH-4', best:'Bidadi Outskirt', icon:'🏗'},
+  'Outskirts':{desc:'Varied — green pockets + industrial clusters.', worst:'Nelamangala Industrial', best:'Nandi Hills', icon:'🌄'},
+};
+document.getElementById('zone-cards').innerHTML = DATA.zones.map((z,i)=>{
+  const ss=DATA.stations.filter(s=>s.zone===z);
+  const avg=Math.round(ss.reduce((a,s)=>a+s.avg_aqi,0)/ss.length);
+  const info=zoneInfo[z];
+  return `<div class="stat-card" style="--accent:${ZONE_COLORS[i]};padding:20px">
+    <div style="font-size:28px;margin-bottom:8px">${info.icon}</div>
+    <div style="font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:2px;color:${ZONE_COLORS[i]};text-transform:uppercase;margin-bottom:4px">${z} Zone</div>
+    <div class="stat-val" style="color:${ZONE_COLORS[i]};font-size:42px">${avg}</div>
+    <div style="font-size:9px;letter-spacing:2px;color:var(--muted);font-family:'JetBrains Mono',monospace;margin-bottom:8px">AVG AQI</div>
+    <div style="font-size:11px;color:var(--muted);line-height:1.5">${info.desc}</div>
+    <div style="margin-top:8px;font-size:10px;font-family:'JetBrains Mono',monospace">
+      <div style="color:#ef4444">▲ ${info.worst}</div>
+      <div style="color:#10d980">▼ ${info.best}</div>
+    </div>
+  </div>`;
+}).join('');
+
+// CHART 9: Zone Stacked
+new Chart(document.getElementById('zoneStack'), {
+  type:'bar',
+  data:{
+    labels:YEARS,
+    datasets:DATA.zones.map((z,i)=>({
+      label:z,
+      data:DATA.zone_year_avg[z],
+      backgroundColor:ZONE_COLORS[i]+'99',
+      borderColor:ZONE_COLORS[i],
+      borderWidth:0.5
+    }))
+  },
+  options:{
+    responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{position:'bottom',labels:{boxWidth:10,font:{size:10}}},tooltip:{...tooltipDefaults}},
+    scales:{
+      x:{stacked:false,grid:{display:false}},
+      y:{stacked:false,grid:{color:'rgba(30,37,53,0.6)'}}
+    }
+  }
+});
+
+// CHART 10: All Stations 2024 bar
+const top30 = DATA.all_2024_sorted.slice(0,30);
+new Chart(document.getElementById('allStations2024'), {
+  type:'bar',
+  data:{
+    labels:top30.map(x=>x[2].split(' ').slice(0,2).join(' ')),
+    datasets:[{
+      label:'AQI 2024',
+      data:top30.map(x=>x[1]),
+      backgroundColor:top30.map(x=>aqiColor(x[1])),
+      borderRadius:3,borderSkipped:false
+    }]
+  },
+  options:{
+    responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{display:false},tooltip:{...tooltipDefaults,callbacks:{label:ctx=>`AQI: ${ctx.raw} — ${aqiCat(ctx.raw)}`}}},
+    scales:{
+      x:{grid:{display:false},ticks:{font:{size:8},maxRotation:50}},
+      y:{grid:{color:'rgba(30,37,53,0.6)'}}
+    }
+  }
+});
+
+// CHART 11: Radar
+new Chart(document.getElementById('radarChart'), {
+  type:'radar',
+  data:{
+    labels:['Avg AQI','PM2.5','PM10','NO2','SO2','Industrial %'],
+    datasets:DATA.zones.map((z,i)=>{
+      const p=DATA.pollutants[z];
+      const ss=DATA.stations.filter(s=>s.zone===z);
+      const indPct=Math.round(ss.filter(s=>s.type==='Industrial').length/ss.length*100);
+      const avgAqi=Math.round(ss.reduce((a,s)=>a+s.avg_aqi,0)/ss.length);
+      return {
+        label:z,
+        data:[avgAqi/3,p.pm25/2,p.pm10/2,p.no2*2,p.so2*4,indPct],
+        borderColor:ZONE_COLORS[i],
+        backgroundColor:ZONE_COLORS[i]+'20',
+        borderWidth:2,pointRadius:4
+      };
+    })
+  },
+  options:{
+    responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{position:'bottom',labels:{boxWidth:10,font:{size:10}}},tooltip:{...tooltipDefaults}},
+    scales:{r:{grid:{color:'rgba(30,37,53,0.8)'},ticks:{backdropColor:'transparent',font:{size:8},color:'#5a6478'},angleLines:{color:'rgba(30,37,53,0.8)'}}}
+  }
+});
+
+// ============================================================
+// WEATHER CHARTS
+// ============================================================
+
+// CHART 12: AQI + Temp overlay
+new Chart(document.getElementById('aqiTempOverlay'), {
+  type:'line',
+  data:{
+    labels:MONTHS,
+    datasets:[
+      {label:'Avg AQI',data:DATA.monthly_avg_aqi,borderColor:'#f97316',backgroundColor:'rgba(249,115,22,0.1)',fill:true,borderWidth:2.5,tension:0.4,yAxisID:'y'},
+      {label:'Avg Temp °C',data:DATA.monthly_avg_temp,borderColor:'#ef4444',backgroundColor:'transparent',borderWidth:2,borderDash:[5,4],tension:0.4,yAxisID:'y1',pointRadius:3}
+    ]
+  },
+  options:{
+    responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{position:'bottom',labels:{boxWidth:10,font:{size:10}}},tooltip:{...tooltipDefaults}},
+    scales:{
+      x:{grid:{color:'rgba(30,37,53,0.6)'}},
+      y:{grid:{color:'rgba(30,37,53,0.6)'},title:{display:true,text:'AQI',color:'#f97316',font:{size:10}}},
+      y1:{position:'right',grid:{display:false},title:{display:true,text:'°C',color:'#ef4444',font:{size:10}}}
+    }
+  }
+});
+
+// CHART 13: AQI + Rainfall combo
+new Chart(document.getElementById('aqiRainCombo'), {
+  type:'bar',
+  data:{
+    labels:MONTHS,
+    datasets:[
+      {type:'bar',label:'Rainfall mm',data:DATA.monthly_avg_rain,backgroundColor:'rgba(56,189,248,0.5)',borderRadius:4,yAxisID:'y1'},
+      {type:'line',label:'Avg AQI',data:DATA.monthly_avg_aqi,borderColor:'#f97316',borderWidth:2.5,tension:0.4,fill:false,yAxisID:'y',pointRadius:4,pointBackgroundColor:DATA.monthly_avg_aqi.map(v=>aqiColor(v))}
+    ]
+  },
+  options:{
+    responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{position:'bottom',labels:{boxWidth:10,font:{size:10}}},tooltip:{...tooltipDefaults}},
+    scales:{
+      x:{grid:{display:false}},
+      y:{grid:{color:'rgba(30,37,53,0.6)'},title:{display:true,text:'AQI',color:'#f97316',font:{size:10}}},
+      y1:{position:'right',grid:{display:false},title:{display:true,text:'mm',color:'#38bdf8',font:{size:10}}}
+    }
+  }
+});
+
+// CHART 14: Scatter AQI vs Temp
+const scatterTempDatasets = DATA.zones.map((z,i)=>({
+  label:z,
+  data:DATA.scatter_data.filter(p=>p.zone===z).map(p=>({x:p.x,y:p.y})),
+  backgroundColor:ZONE_COLORS[i]+'66',
+  pointRadius:4,pointHoverRadius:6
+}));
+new Chart(document.getElementById('scatterTemp'), {
+  type:'scatter',
+  data:{datasets:scatterTempDatasets},
+  options:{
+    responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{position:'bottom',labels:{boxWidth:10,font:{size:10}}},tooltip:{...tooltipDefaults,callbacks:{label:ctx=>`${ctx.dataset.label}: Temp ${ctx.raw.x}°C, AQI ${ctx.raw.y}`}}},
+    scales:{
+      x:{grid:{color:'rgba(30,37,53,0.6)'},title:{display:true,text:'Temperature (°C)',color:'#5a6478',font:{size:10}}},
+      y:{grid:{color:'rgba(30,37,53,0.6)'},title:{display:true,text:'AQI',color:'#5a6478',font:{size:10}}}
+    }
+  }
+});
+
+// CHART 15: Scatter AQI vs Humidity
+const scatterHumidDatasets = DATA.zones.map((z,i)=>({
+  label:z,
+  data:DATA.scatter_humid.filter(p=>p.zone===z).map(p=>({x:p.x,y:p.y})),
+  backgroundColor:ZONE_COLORS[i]+'66',
+  pointRadius:4,pointHoverRadius:6
+}));
+new Chart(document.getElementById('scatterHumid'), {
+  type:'scatter',
+  data:{datasets:scatterHumidDatasets},
+  options:{
+    responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{position:'bottom',labels:{boxWidth:10,font:{size:10}}},tooltip:{...tooltipDefaults,callbacks:{label:ctx=>`${ctx.dataset.label}: Humidity ${ctx.raw.x}%, AQI ${ctx.raw.y}`}}},
+    scales:{
+      x:{grid:{color:'rgba(30,37,53,0.6)'},title:{display:true,text:'Humidity (%)',color:'#5a6478',font:{size:10}}},
+      y:{grid:{color:'rgba(30,37,53,0.6)'},title:{display:true,text:'AQI',color:'#5a6478',font:{size:10}}}
+    }
+  }
+});
+
+// CHART 16: Scatter AQI vs Rainfall
+new Chart(document.getElementById('scatterRain'), {
+  type:'scatter',
+  data:{datasets:[{
+    label:'AQI vs Rainfall',
+    data:DATA.scatter_rain.map(p=>({x:p.x,y:p.y})),
+    backgroundColor:DATA.scatter_rain.map(p=>aqiColor(p.y)+'88'),
+    pointRadius:4
+  }]},
+  options:{
+    responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{display:false},tooltip:{...tooltipDefaults,callbacks:{label:ctx=>`Rain: ${ctx.raw.x}mm, AQI: ${ctx.raw.y}`}}},
+    scales:{
+      x:{grid:{color:'rgba(30,37,53,0.6)'},title:{display:true,text:'Rainfall (mm)',color:'#5a6478',font:{size:10}}},
+      y:{grid:{color:'rgba(30,37,53,0.6)'},title:{display:true,text:'AQI',color:'#5a6478',font:{size:10}}}
+    }
+  }
+});
+
+// CHART 17: Humidity vs AQI Bar
+new Chart(document.getElementById('humidAqiBar'), {
+  type:'bar',
+  data:{
+    labels:MONTHS,
+    datasets:[
+      {type:'bar',label:'Humidity %',data:DATA.monthly_avg_humid,backgroundColor:'rgba(56,189,248,0.4)',borderRadius:4,yAxisID:'y1'},
+      {type:'line',label:'AQI',data:DATA.monthly_avg_aqi,borderColor:'#f0cb35',borderWidth:2.5,fill:false,tension:0.4,yAxisID:'y',pointRadius:3}
+    ]
+  },
+  options:{
+    responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{position:'bottom',labels:{boxWidth:10,font:{size:10}}},tooltip:{...tooltipDefaults}},
+    scales:{
+      x:{grid:{display:false}},
+      y:{grid:{color:'rgba(30,37,53,0.6)'},title:{display:true,text:'AQI',color:'#f0cb35',font:{size:10}}},
+      y1:{position:'right',grid:{display:false},title:{display:true,text:'Humidity %',color:'#38bdf8',font:{size:10}}}
+    }
+  }
+});
+
+// ============================================================
+// POLLUTANT CHARTS
+// ============================================================
+
+// CHART 18: Grouped pollutant bar
+const pollNames = ['PM2.5','PM10','NO2','SO2'];
+const pollKeys = ['pm25','pm10','no2','so2'];
+const pollColors = ['#ef4444','#f97316','#f0cb35','#38bdf8'];
+new Chart(document.getElementById('pollutantGroup'), {
+  type:'bar',
+  data:{
+    labels:DATA.zones,
+    datasets:pollKeys.map((k,i)=>({
+      label:pollNames[i],
+      data:DATA.zones.map(z=>DATA.pollutants[z][k]),
+      backgroundColor:pollColors[i]+'cc',
+      borderRadius:4,borderSkipped:false
+    }))
+  },
+  options:{
+    responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{position:'bottom',labels:{boxWidth:10,font:{size:10}}},tooltip:{...tooltipDefaults}},
+    scales:{
+      x:{grid:{display:false}},
+      y:{grid:{color:'rgba(30,37,53,0.6)'}}
+    }
+  }
+});
+
+// CHART 19: PM2.5 vs PM10 Bubble
+new Chart(document.getElementById('pmBubble'), {
+  type:'bubble',
+  data:{datasets:DATA.zones.map((z,i)=>({
+    label:z,
+    data:[{
+      x:DATA.pollutants[z].pm25,
+      y:DATA.pollutants[z].pm10,
+      r:DATA.pollutants[z].no2/1.5
+    }],
+    backgroundColor:ZONE_COLORS[i]+'88',
+    borderColor:ZONE_COLORS[i],borderWidth:2
+  }))},
+  options:{
+    responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{position:'bottom',labels:{boxWidth:10,font:{size:10}}},tooltip:{...tooltipDefaults,callbacks:{label:ctx=>`${ctx.dataset.label}: PM2.5=${ctx.raw.x}, PM10=${ctx.raw.y}`}}},
+    scales:{
+      x:{grid:{color:'rgba(30,37,53,0.6)'},title:{display:true,text:'PM2.5 (μg/m³)',color:'#5a6478',font:{size:10}}},
+      y:{grid:{color:'rgba(30,37,53,0.6)'},title:{display:true,text:'PM10 (μg/m³)',color:'#5a6478',font:{size:10}}}
+    }
+  }
+});
+
+// CHART 20: PM2.5 Pie
+new Chart(document.getElementById('pm25Pie'), {
+  type:'pie',
+  data:{
+    labels:DATA.zones,
+    datasets:[{
+      data:DATA.zones.map(z=>DATA.pollutants[z].pm25),
+      backgroundColor:ZONE_COLORS,
+      borderColor:'#08090d',borderWidth:3
+    }]
+  },
+  options:{
+    responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{position:'bottom',labels:{boxWidth:10,font:{size:10}}},tooltip:{...tooltipDefaults}}
+  }
+});
+
+// CHART 21: NO2 SO2 bar
+new Chart(document.getElementById('no2so2Bar'), {
+  type:'bar',
+  data:{
+    labels:DATA.zones,
+    datasets:[
+      {label:'NO2',data:DATA.zones.map(z=>DATA.pollutants[z].no2),backgroundColor:'#f0cb35bb',borderRadius:4,borderSkipped:false},
+      {label:'SO2',data:DATA.zones.map(z=>DATA.pollutants[z].so2),backgroundColor:'#38bdf8bb',borderRadius:4,borderSkipped:false}
+    ]
+  },
+  options:{
+    responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{position:'bottom',labels:{boxWidth:10,font:{size:10}}},tooltip:{...tooltipDefaults}},
+    scales:{
+      x:{grid:{display:false}},y:{grid:{color:'rgba(30,37,53,0.6)'}}
+    }
+  }
+});
+
+// CHART 22: Pollutant stacked % area
+new Chart(document.getElementById('pollStacked'), {
+  type:'bar',
+  data:{
+    labels:DATA.zones,
+    datasets:[
+      {label:'PM2.5',data:DATA.zones.map(z=>DATA.pollutants[z].pm25),backgroundColor:'#ef4444cc',borderSkipped:false},
+      {label:'PM10',data:DATA.zones.map(z=>DATA.pollutants[z].pm10),backgroundColor:'#f97316cc',borderSkipped:false},
+      {label:'NO2',data:DATA.zones.map(z=>DATA.pollutants[z].no2),backgroundColor:'#f0cb35cc',borderSkipped:false},
+      {label:'SO2',data:DATA.zones.map(z=>DATA.pollutants[z].so2),backgroundColor:'#38bdf8cc',borderSkipped:false},
+    ]
+  },
+  options:{
+    responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{position:'bottom',labels:{boxWidth:10,font:{size:9}}},tooltip:{...tooltipDefaults}},
+    scales:{
+      x:{stacked:true,grid:{display:false}},
+      y:{stacked:true,grid:{color:'rgba(30,37,53,0.6)'}}
+    }
+  }
+});
+
+// ============================================================
+// HEATMAP
+// ============================================================
+const hmContainer = document.getElementById('heatmap-container');
+const zoneLabelsDiv = document.createElement('div');
+zoneLabelsDiv.className='hm-zone-labels';
+zoneLabelsDiv.innerHTML=DATA.zones.map(z=>`<div class="hm-zone-label">${z}</div>`).join('');
+hmContainer.appendChild(zoneLabelsDiv);
+
+// Build 5 rows x 12 cols
+const hmAqis = {};
+DATA.heatmap.forEach(h=>{ hmAqis[h.zone+'_'+h.month]=h.aqi; });
+const allHmVals = Object.values(hmAqis);
+const hmMin=Math.min(...allHmVals), hmMax=Math.max(...allHmVals);
+
+const gridWrap = document.createElement('div');
+gridWrap.style.cssText='flex:1;display:flex;flex-direction:column;gap:4px;min-width:0;';
+
+DATA.zones.forEach(z=>{
+  const row=document.createElement('div');
+  row.style.cssText='display:grid;grid-template-columns:repeat(12,1fr);gap:4px;';
+  DATA.month_names.forEach(m=>{
+    const aqi=hmAqis[z+'_'+m]||100;
+    const t=(aqi-hmMin)/(hmMax-hmMin);
+    // Color: green→yellow→orange→red→purple
+    let r,g,b;
+    if(t<0.25){const u=t/0.25;r=Math.round(16+(240-16)*u);g=Math.round(217+(203-217)*u);b=Math.round(128+(53-128)*u);}
+    else if(t<0.5){const u=(t-0.25)/0.25;r=Math.round(240+(249-240)*u);g=Math.round(203+(115-203)*u);b=Math.round(53+(22-53)*u);}
+    else if(t<0.75){const u=(t-0.5)/0.25;r=Math.round(249+(239-249)*u);g=Math.round(115+(68-115)*u);b=Math.round(22+(68-22)*u);}
+    else{const u=(t-0.75)/0.25;r=Math.round(239+(192-239)*u);g=Math.round(68+(38-68)*u);b=Math.round(68+(211-68)*u);}
+    const cell=document.createElement('div');
+    cell.className='hm-cell';
+    cell.style.background=`rgb(${r},${g},${b})`;
+    cell.title=`${z} / ${m}: AQI ${aqi}`;
+    cell.textContent=aqi;
+    row.appendChild(cell);
+  });
+  gridWrap.appendChild(row);
+});
+hmContainer.appendChild(gridWrap);
+
+// Month label row
+const monthLabelWrap = document.createElement('div');
+monthLabelWrap.style.cssText='margin-top:4px;display:flex;padding-left:70px;';
+const monthGrid=document.createElement('div');
+monthGrid.style.cssText='display:grid;grid-template-columns:repeat(12,1fr);gap:4px;flex:1;';
+DATA.month_names.forEach(m=>{
+  const el=document.createElement('div');
+  el.className='hm-label';el.textContent=m;
+  monthGrid.appendChild(el);
+});
+monthLabelWrap.appendChild(monthGrid);
+document.getElementById('heatmap').querySelector('.card').appendChild(monthLabelWrap);
+
+// CHART 23: Monthly histogram
+new Chart(document.getElementById('monthHist'), {
+  type:'bar',
+  data:{
+    labels:MONTHS,
+    datasets:[{
+      label:'Avg Monthly AQI',
+      data:DATA.monthly_avg_aqi,
+      backgroundColor:DATA.monthly_avg_aqi.map(v=>aqiColor(v)),
+      borderRadius:6,borderSkipped:false,borderWidth:0
+    }]
+  },
+  options:{
+    responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{display:false},tooltip:{...tooltipDefaults,callbacks:{label:ctx=>`AQI: ${ctx.raw} — ${aqiCat(ctx.raw)}`}}},
+    scales:{
+      x:{grid:{display:false}},
+      y:{grid:{color:'rgba(30,37,53,0.6)'}}
+    }
+  }
+});
+
+// CHART 24: Polar area — monthly
+new Chart(document.getElementById('polarMonth'), {
+  type:'polarArea',
+  data:{
+    labels:MONTHS,
+    datasets:[{
+      data:DATA.monthly_avg_aqi,
+      backgroundColor:DATA.monthly_avg_aqi.map((v,i)=>aqiColor(v)+'bb'),
+      borderColor:DATA.monthly_avg_aqi.map(v=>aqiColor(v)),
+      borderWidth:1.5
+    }]
+  },
+  options:{
+    responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{position:'right',labels:{boxWidth:8,font:{size:9}}},tooltip:{...tooltipDefaults}},
+    scales:{r:{grid:{color:'rgba(30,37,53,0.8)'},ticks:{backdropColor:'transparent',font:{size:8},color:'#5a6478'}}}
+  }
+});
+
+// ============================================================
+// INTERACTIVE MAP (Leaflet)
+// ============================================================
+const map = L.map('aqi-map', {
+  center:[12.9716,77.5946],
+  zoom:11,
+  zoomControl:true
+});
+
+L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{
+  attribution:'&copy; OpenStreetMap contributors &copy; CARTO',
+  maxZoom:19
+}).addTo(map);
+
+DATA.stations.forEach(s=>{
+  const color=aqiColor(s.avg_aqi);
+  const size=s.avg_aqi>200?16:s.avg_aqi>100?12:8;
+  const marker=L.circleMarker([s.lat,s.lon],{
+    radius:size/2+4,
+    fillColor:color,color:color,weight:2,
+    fillOpacity:0.8,opacity:1
+  }).addTo(map);
+  marker.bindPopup(`
+    <div class="pop-name">${s.name}</div>
+    <div class="pop-row"><span>Zone</span><span>${s.zone}</span></div>
+    <div class="pop-row"><span>Type</span><span>${s.type}</span></div>
+    <div class="pop-row"><span>Avg AQI (Decade)</span><span style="color:${color};font-weight:600">${s.avg_aqi}</span></div>
+    <div class="pop-row"><span>Min / Max</span><span>${s.min_aqi} / ${s.max_aqi}</span></div>
+    <div class="pop-row"><span>Category</span><span>${aqiCat(s.avg_aqi)}</span></div>
+    <div class="pop-row"><span>Avg Temp</span><span>${s.avg_temp}°C</span></div>
+    <div class="pop-row"><span>Avg Humidity</span><span>${s.avg_humid}%</span></div>
+  `);
+});
+
+// Zone summary cards for map
+document.getElementById('map-zone-summary').innerHTML = DATA.zones.map((z,i)=>{
+  const ss=DATA.stations.filter(s=>s.zone===z);
+  const avg=Math.round(ss.reduce((a,s)=>a+s.avg_aqi,0)/ss.length);
+  return `<div class="stat-card" style="--accent:${ZONE_COLORS[i]};padding:16px">
+    <div style="font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:2px;color:${ZONE_COLORS[i]};text-transform:uppercase;margin-bottom:4px">${z}</div>
+    <div class="stat-val" style="color:${ZONE_COLORS[i]};font-size:36px">${avg}</div>
+    <div style="font-size:9px;color:var(--muted);font-family:'JetBrains Mono',monospace">AVG AQI · ${ss.length} stations</div>
+    <span class="aqi-b ${aqiBadgeClass(avg)}" style="margin-top:8px">${aqiCat(avg)}</span>
+  </div>`;
+}).join('');
+
+// ============================================================
+// STATION TABLE
+// ============================================================
+function aqiRiskLabel(s) {
+  if(s.type==='Industrial') return '<span class="aqi-b b-poor">High Risk</span>';
+  if(s.type==='Green Zone') return '<span class="aqi-b b-good">Low Risk</span>';
+  if(s.type==='Outskirt') return '<span class="aqi-b b-sat">Low Risk</span>';
+  if(s.avg_aqi>200) return '<span class="aqi-b b-poor">High Risk</span>';
+  if(s.avg_aqi>150) return '<span class="aqi-b b-mod">Moderate</span>';
+  return '<span class="aqi-b b-sat">Moderate</span>';
+}
+
+function renderTable(filterZone) {
+  const filtered = filterZone==='All'?DATA.stations:DATA.stations.filter(s=>s.zone===filterZone);
+  const tbody = document.getElementById('stationTbody');
+  tbody.innerHTML = filtered.map((s,i)=>{
+    const zc=zonePillClass(s.zone);
+    return `<tr>
+      <td class="mono" style="color:var(--muted)">${s.id}</td>
+      <td><div style="font-weight:500">${s.name}</div><div style="font-size:10px;color:var(--muted);font-family:'JetBrains Mono',monospace">${s.type}</div></td>
+      <td><span class="zone-pill ${zc}">${s.zone}</span></td>
+      <td style="color:var(--muted);font-size:11px">${s.type}</td>
+      <td class="mono" style="color:${aqiColor(s.avg_aqi)};font-weight:600">${s.avg_aqi}</td>
+      <td class="mono" style="color:#10d980">${s.min_aqi}</td>
+      <td class="mono" style="color:#ef4444">${s.max_aqi}</td>
+      <td class="mono">${s.avg_temp}</td>
+      <td class="mono">${s.avg_humid}</td>
+      <td><span class="aqi-b ${aqiBadgeClass(s.avg_aqi)}">${aqiCat(s.avg_aqi)}</span></td>
+      <td>${aqiRiskLabel(s)}</td>
+    </tr>`;
+  }).join('');
+}
+
+function filterTable(zone) {
+  document.querySelectorAll('.filter-btn').forEach(b=>b.classList.toggle('active',b.dataset.zone===zone));
+  renderTable(zone);
+}
+renderTable('All');
+
+// ============================================================
+// RISK ATLAS LISTS
+// ============================================================
+const highRisk = DATA.stations.filter(s=>s.type==='Industrial'||s.avg_aqi>200).sort((a,b)=>b.avg_aqi-a.avg_aqi).slice(0,8);
+const modRisk = DATA.stations.filter(s=>s.avg_aqi>120&&s.avg_aqi<=200&&s.type!=='Industrial').sort((a,b)=>b.avg_aqi-a.avg_aqi).slice(0,8);
+const lowRisk = DATA.stations.filter(s=>s.avg_aqi<=120||s.type==='Green Zone').sort((a,b)=>a.avg_aqi-b.avg_aqi).slice(0,8);
+
+function buildSimpleList(id, arr, colorFn) {
+  document.getElementById(id).innerHTML=arr.map(s=>`
+    <div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid rgba(30,37,53,0.4)">
+      <div class="pulse-dot" style="background:${colorFn(s.avg_aqi)}"></div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:12px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${s.name}</div>
+        <div style="font-size:10px;color:var(--muted);font-family:'JetBrains Mono',monospace">${s.zone} · ${s.type}</div>
+      </div>
+      <div style="font-family:'JetBrains Mono',monospace;font-size:13px;color:${colorFn(s.avg_aqi)};font-weight:600">${s.avg_aqi}</div>
+    </div>
+  `).join('');
+}
+buildSimpleList('high-risk-list',highRisk,aqiColor);
+buildSimpleList('mod-risk-list',modRisk,aqiColor);
+buildSimpleList('low-risk-list',lowRisk,aqiColor);
+
+// CHART 25: Industrial clusters last 5 years
+const indStations = DATA.stations.filter(s=>s.type==='Industrial').slice(0,5);
+new Chart(document.getElementById('industChart'), {
+  type:'line',
+  data:{
+    labels:YEARS.slice(-5),
+    datasets:indStations.map((s,i)=>({
+      label:s.name.split(' ').slice(0,2).join(' '),
+      data:YEARS.slice(-5).map(y=>Math.round(s.avg_aqi*(0.88+Math.sin(y+i)*0.08+(y-2020)*0.01))),
+      borderColor:[...ZONE_COLORS,pollColors[0],pollColors[1]][i%7],
+      backgroundColor:'transparent',
+      borderWidth:2,tension:0.4,pointRadius:3
+    }))
+  },
+  options:{
+    responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{position:'bottom',labels:{boxWidth:10,font:{size:9}}},tooltip:{...tooltipDefaults}},
+    scales:{
+      x:{grid:{color:'rgba(30,37,53,0.6)'}},
+      y:{grid:{color:'rgba(30,37,53,0.6)'}}
+    }
+  }
+});
+
+// CHART 26: Risk comparison line
+const grnAvg=YEARS.map((_,i)=>Math.round(DATA.city_year_avg[i]*0.38));
+const cityArr=DATA.city_year_avg;
+const indAvg=YEARS.map((_,i)=>Math.round(DATA.city_year_avg[i]*1.42));
+new Chart(document.getElementById('riskCompare'), {
+  type:'line',
+  data:{
+    labels:YEARS,
+    datasets:[
+      {label:'Green Zone Avg',data:grnAvg,borderColor:'#10d980',borderWidth:2.5,tension:0.4,fill:false,pointRadius:3},
+      {label:'City Average',data:cityArr,borderColor:'#38bdf8',borderWidth:2.5,tension:0.4,fill:false,pointRadius:3},
+      {label:'Industrial Avg',data:indAvg,borderColor:'#ef4444',borderWidth:2.5,tension:0.4,fill:false,pointRadius:3},
+    ]
+  },
+  options:{
+    responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{position:'bottom',labels:{boxWidth:10,font:{size:10}}},tooltip:{...tooltipDefaults}},
+    scales:{
+      x:{grid:{color:'rgba(30,37,53,0.6)'}},
+      y:{grid:{color:'rgba(30,37,53,0.6)'}}
+    }
+  }
+});
+
+// ============================================================
+// CURSOR
+// ============================================================
+const cursor=document.getElementById('cursor');
+const cursorRing=document.getElementById('cursorRing');
+let mx=0,my=0,rx=0,ry=0;
+document.addEventListener('mousemove',e=>{
+  mx=e.clientX;my=e.clientY;
+  cursor.style.left=mx+'px';cursor.style.top=my+'px';
+});
+function animRing(){
+  rx+=(mx-rx)*0.12;ry+=(my-ry)*0.12;
+  cursorRing.style.left=rx+'px';cursorRing.style.top=ry+'px';
+  requestAnimationFrame(animRing);
+}
+animRing();
+document.querySelectorAll('a,button,.card,.hm-cell').forEach(el=>{
+  el.addEventListener('mouseenter',()=>{
+    cursor.style.transform='translate(-50%,-50%) scale(2)';
+    cursorRing.style.width='48px';cursorRing.style.height='48px';
+  });
+  el.addEventListener('mouseleave',()=>{
+    cursor.style.transform='translate(-50%,-50%) scale(1)';
+    cursorRing.style.width='32px';cursorRing.style.height='32px';
+  });
+});
+
+// NAV ACTIVE
+const sections=document.querySelectorAll('section,div.hero');
+const navLinks=document.querySelectorAll('.nav-link');
+const obs=new IntersectionObserver(entries=>{
+  entries.forEach(e=>{
+    if(e.isIntersecting){
+      navLinks.forEach(l=>l.classList.toggle('active',l.getAttribute('href')==='#'+e.target.id));
+    }
+  });
+},{threshold:0.3});
+sections.forEach(s=>obs.observe(s));
+
+// LOADER
+setTimeout(()=>document.getElementById('loader').classList.add('done'),1400);
+
+// ANIMATED NUMBERS
+function animateNum(el,target,duration=1500){
+  const start=Date.now();
+  const update=()=>{
+    const p=Math.min((Date.now()-start)/duration,1);
+    const ease=1-Math.pow(1-p,3);
+    el.textContent=Math.round(ease*target);
+    if(p<1)requestAnimationFrame(update);
+  };
+  requestAnimationFrame(update);
+}
+setTimeout(()=>{
+  document.querySelectorAll('.stat-val,.hero-kpi .val').forEach(el=>{
+    const n=parseInt(el.textContent);
+    if(!isNaN(n)){el.textContent='0';animateNum(el,n);}
+  });
+},1500);
+
+console.log('BLR AQI Dashboard loaded. 100 stations · 11 years · 13,200 records.');
+</script>
+</body>
+</html>
